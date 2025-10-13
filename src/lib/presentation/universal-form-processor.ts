@@ -129,6 +129,9 @@ export async function processUniversalFormData(formData: FormData): Promise<Proc
         throw new Error("Invalid YouTube URL");
       }
       const videoId = videoIdMatch[1];
+      if (!videoId) {
+        throw new Error("Could not extract video ID from YouTube URL");
+      }
       console.log(`Extracted video ID: ${videoId}`);
 
       content = await getYoutubeTranscript(videoId, "en");
@@ -142,6 +145,9 @@ export async function processUniversalFormData(formData: FormData): Promise<Proc
   else if (wikipediaLink) {
     try {
       const title = wikipediaLink.split("/").pop();
+      if (!title) {
+        throw new Error("Could not extract title from Wikipedia URL");
+      }
       const response = await fetch(
         `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&titles=${title}`
       );
@@ -150,6 +156,9 @@ export async function processUniversalFormData(formData: FormData): Promise<Proc
       };
       const pages = data.query.pages;
       const pageId = Object.keys(pages)[0];
+      if (!pageId || !pages[pageId]) {
+        throw new Error("No Wikipedia page found");
+      }
       content = pages[pageId].extract;
     } catch (error) {
       console.error("Error fetching Wikipedia content:", error);
