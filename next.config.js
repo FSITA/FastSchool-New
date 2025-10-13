@@ -22,6 +22,13 @@ const config = {
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client'],
   },
+  // Ensure proper server configuration for Render.com
+  serverRuntimeConfig: {
+    // Will only be available on the server side
+  },
+  publicRuntimeConfig: {
+    // Will be available on both server and client
+  },
   images: {
     remotePatterns: [
       {

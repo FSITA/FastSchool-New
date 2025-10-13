@@ -10,8 +10,7 @@
     "dev": "next dev",
     "postinstall": "prisma generate",
     "lint": "next lint",
-    "start": "node start.js",
-    "start:next": "next start",
+    "start": "next start",
     "server": "json-server src/data/quiz/quiz.json --port 8000",
     "build:production": "prisma generate && next build",
     "deploy:setup": "prisma db push"
