@@ -8,13 +8,14 @@ async function getYoutubeTranscript(
 ): Promise<string> {
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-  // Add realistic headers to avoid blocking
+  // Enhanced headers with cookies to avoid blocking
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Accept-Language': 'en-US,en;q=0.9',
     'Accept-Encoding': 'gzip, deflate, br',
     'Referer': 'https://www.google.com/',
+    'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+667; YSC=dQw4w9WgXcQ; VISITOR_INFO1_LIVE=f0wojS1_1Zo; PREF=f4=4000000&tz=UTC',
     'Cache-Control': 'no-cache',
     'Pragma': 'no-cache',
     'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
@@ -24,14 +25,70 @@ async function getYoutubeTranscript(
     'Sec-Fetch-Mode': 'navigate',
     'Sec-Fetch-Site': 'cross-site',
     'Sec-Fetch-User': '?1',
-    'Upgrade-Insecure-Requests': '1'
+    'Upgrade-Insecure-Requests': '1',
+    'DNT': '1',
+    'x-youtube-client-name': '1',
+    'x-youtube-client-version': '2.20231219.04.00'
   };
 
-  const html = await fetch(videoUrl, { headers }).then((res) => res.text());
-  const apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
-  if (!apiKeyMatch) throw new Error("INNERTUBE_API_KEY not found.");
+  console.log(`🔍 Fetching YouTube page: ${videoUrl}`);
+  
+  const response = await fetch(videoUrl, { headers });
+  
+  console.log(`📊 Response status: ${response.status}`);
+  console.log(`📊 Response headers:`, Object.fromEntries(response.headers.entries()));
+  
+  const html = await response.text();
+  console.log(`📊 HTML length: ${html.length}`);
+  console.log(`📊 HTML preview: ${html.substring(0, 500)}...`);
+  
+  // Check for common blocking indicators
+  if (html.includes('consent.google.com') || html.includes('consent.youtube.com')) {
+    console.log('❌ YouTube consent page detected');
+    throw new Error('YouTube consent page detected - need better cookies');
+  }
+  if (html.includes('bot detection') || html.includes('unusual traffic')) {
+    console.log('❌ YouTube bot detection triggered');
+    throw new Error('YouTube bot detection triggered');
+  }
+  if (html.includes('age verification')) {
+    console.log('❌ YouTube age verification required');
+    throw new Error('YouTube age verification required');
+  }
+  
+  let apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
+  if (!apiKeyMatch) {
+    console.log(`❌ INNERTUBE_API_KEY not found in HTML`);
+    console.log(`🔍 Searching for alternative patterns...`);
+    
+    // Try alternative patterns
+    const altPatterns = [
+      /"INNERTUBE_API_KEY":"([^"]+)"/,
+      /INNERTUBE_API_KEY['"]\s*:\s*['"]([^'"]+)['"]/,
+      /apiKey['"]\s*:\s*['"]([^'"]+)['"]/,
+      /"key":"([^"]+)"/,
+    ];
+    
+    for (const pattern of altPatterns) {
+      const match = html.match(pattern);
+      if (match) {
+        console.log(`✅ Found API key with pattern: ${pattern}`);
+        apiKeyMatch = match;
+        break;
+      }
+    }
+  }
+  
+  if (!apiKeyMatch) {
+    console.log(`❌ All API key patterns failed. HTML length: ${html.length}`);
+    throw new Error(`INNERTUBE_API_KEY not found. HTML length: ${html.length}`);
+  }
+  
   const apiKey = apiKeyMatch[1];
+  console.log(`✅ Found API key: ${apiKey.substring(0, 20)}...`);
 
+  console.log(`🔍 Calling YouTube API with key: ${apiKey.substring(0, 20)}...`);
+  
   const playerData = await fetch(
     `https://www.youtube.com/youtubei/v1/player?key=${apiKey}`,
     {
@@ -42,7 +99,8 @@ async function getYoutubeTranscript(
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'en-US,en;q=0.9',
         'Referer': 'https://www.youtube.com/',
-        'Origin': 'https://www.youtube.com'
+        'Origin': 'https://www.youtube.com',
+        'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+667; YSC=dQw4w9WgXcQ; VISITOR_INFO1_LIVE=f0wojS1_1Zo'
       },
       body: JSON.stringify({
         context: {
@@ -54,31 +112,53 @@ async function getYoutubeTranscript(
         videoId,
       }),
     }
-  ).then((res) => res.json()) as any;
+  ).then((res) => {
+    console.log(`📊 YouTube API response status: ${res.status}`);
+    return res.json();
+  }) as any;
+  
+  console.log(`📊 Player data received, checking for captions...`);
 
   const tracks =
     playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+  
+  console.log(`📊 Found ${tracks?.length || 0} caption tracks`);
+  if (tracks && tracks.length > 0) {
+    console.log(`📊 Available languages: ${tracks.map((t: any) => t.languageCode).join(', ')}`);
+  }
+  
   if (!tracks || tracks.length === 0) {
+    console.log(`❌ No caption tracks found in player data`);
     throw new Error("No captions found for this video.");
   }
 
   let track = tracks.find((t: any) => t.languageCode === language);
   if (!track) {
     console.log(
-      `No captions for language '${language}', falling back to the first available track.`
+      `⚠️ No captions for language '${language}', falling back to the first available track.`
     );
     track = tracks[0];
   }
+  
+  console.log(`✅ Using caption track: ${track.languageCode} (${track.name?.simpleText || 'Unknown'})`);
 
   const baseUrl = track.baseUrl.replace(/&fmt=\w+$/, "");
+  console.log(`🔍 Fetching transcript from: ${baseUrl.substring(0, 100)}...`);
+  
   const xml = await fetch(baseUrl, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'application/xml, text/xml, */*',
       'Accept-Language': 'en-US,en;q=0.9',
-      'Referer': 'https://www.youtube.com/'
+      'Referer': 'https://www.youtube.com/',
+      'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+667'
     }
-  }).then((res) => res.text());
+  }).then((res) => {
+    console.log(`📊 Transcript XML response status: ${res.status}`);
+    return res.text();
+  });
+  
+  console.log(`📊 Transcript XML length: ${xml.length}`);
   const parsed = await parseStringPromise(xml);
 
   return parsed.transcript.text.map((entry: any) => entry._).join(" ");
