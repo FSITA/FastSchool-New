@@ -8,7 +8,26 @@ async function getYoutubeTranscript(
 ): Promise<string> {
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-  const html = await fetch(videoUrl).then((res) => res.text());
+  // Add realistic headers to avoid blocking
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': 'https://www.google.com/',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+    'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    'Sec-Ch-Ua-Mobile': '?0',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'cross-site',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1'
+  };
+
+  const html = await fetch(videoUrl, { headers }).then((res) => res.text());
   const apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
   if (!apiKeyMatch) throw new Error("INNERTUBE_API_KEY not found.");
   const apiKey = apiKeyMatch[1];
@@ -17,7 +36,14 @@ async function getYoutubeTranscript(
     `https://www.youtube.com/youtubei/v1/player?key=${apiKey}`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.youtube.com/',
+        'Origin': 'https://www.youtube.com'
+      },
       body: JSON.stringify({
         context: {
           client: {
@@ -45,7 +71,14 @@ async function getYoutubeTranscript(
   }
 
   const baseUrl = track.baseUrl.replace(/&fmt=\w+$/, "");
-  const xml = await fetch(baseUrl).then((res) => res.text());
+  const xml = await fetch(baseUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/xml, text/xml, */*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://www.youtube.com/'
+    }
+  }).then((res) => res.text());
   const parsed = await parseStringPromise(xml);
 
   return parsed.transcript.text.map((entry: any) => entry._).join(" ");
