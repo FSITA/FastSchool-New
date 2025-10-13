@@ -18,6 +18,10 @@ const config = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  // Add this for Render.com compatibility
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
+  },
   images: {
     remotePatterns: [
       {
