@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/server/db";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 // Schema for creating/updating a theme
@@ -21,7 +21,7 @@ export async function createCustomTheme(formData: ThemeFormData) {
 
     const validatedData = themeSchema.parse(formData);
 
-    const newTheme = await db.customTheme.create({
+    const newTheme = await prisma.customTheme.create({
       data: {
         name: validatedData.name,
         description: validatedData.description,
@@ -71,7 +71,7 @@ export async function updateCustomTheme(
     const validatedData = themeSchema.parse(formData);
 
     // Verify ownership
-    const existingTheme = await db.customTheme.findUnique({
+    const existingTheme = await prisma.customTheme.findUnique({
       where: { id: themeId },
     });
 
@@ -81,7 +81,7 @@ export async function updateCustomTheme(
 
     // Skip ownership check since auth is disabled
 
-    await db.customTheme.update({
+    await prisma.customTheme.update({
       where: { id: themeId },
       data: {
         name: validatedData.name,
@@ -126,7 +126,7 @@ export async function deleteCustomTheme(themeId: string) {
     // Skip authentication check - allow access without login
 
     // Verify ownership
-    const existingTheme = await db.customTheme.findUnique({
+    const existingTheme = await prisma.customTheme.findUnique({
       where: { id: themeId },
     });
 
@@ -136,7 +136,7 @@ export async function deleteCustomTheme(themeId: string) {
 
     // Skip ownership check and logo deletion since auth is disabled and we use local storage
 
-    await db.customTheme.delete({
+    await prisma.customTheme.delete({
       where: { id: themeId },
     });
 
@@ -159,7 +159,7 @@ export async function getUserCustomThemes() {
   try {
     // Skip authentication check - allow access without login
 
-    const themes = await db.customTheme.findMany({
+    const themes = await prisma.customTheme.findMany({
       where: {
         userId: "anonymous-user", // Get themes for anonymous user
       },
@@ -185,7 +185,7 @@ export async function getUserCustomThemes() {
 // Get all public themes
 export async function getPublicCustomThemes() {
   try {
-    const themes = await db.customTheme.findMany({
+    const themes = await prisma.customTheme.findMany({
       where: {
         isPublic: true,
       },
@@ -219,7 +219,7 @@ export async function getPublicCustomThemes() {
 // Get a single theme by ID
 export async function getCustomThemeById(themeId: string) {
   try {
-    const theme = await db.customTheme.findUnique({
+    const theme = await prisma.customTheme.findUnique({
       where: { id: themeId },
       include: {
         user: {

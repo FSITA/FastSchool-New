@@ -2,7 +2,7 @@
 
 import { env } from "@/env";
 import { GoogleGenAI } from "@google/genai"; // Correct package for Imagen
-import { db } from "@/server/db";
+import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
@@ -115,7 +115,7 @@ export async function generateImageAction(prompt: string) {
 
     // Store the image metadata in the database
     console.log("[LOG] Storing image metadata in the database...");
-    const savedImage = await db.generatedImage.create({
+    const savedImage = await prisma.generatedImage.create({
       data: {
         url: permanentUrl,
         prompt: prompt,

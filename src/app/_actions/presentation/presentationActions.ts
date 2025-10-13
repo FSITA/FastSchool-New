@@ -2,7 +2,7 @@
 
 import { type PlateSlide } from "@/components/presentation/utils/parser";
 // Authentication removed - allow access without login
-import { db } from "@/server/db";
+import { prisma } from "@/lib/prisma";
 import { type InputJsonValue } from "@prisma/client/runtime/library";
 
 export async function createPresentation(
@@ -20,7 +20,7 @@ export async function createPresentation(
   const userId = "anonymous-user"; // Default user ID since auth is disabled
 
   try {
-    const presentation = await db.baseDocument.create({
+    const presentation = await prisma.baseDocument.create({
       data: {
         type: "PRESENTATION",
         documentType: "presentation",
@@ -96,7 +96,7 @@ export async function updatePresentation({
     const effectiveLanguage = language;
 
     // Update base document with all presentation data
-    const presentation = await db.baseDocument.update({
+    const presentation = await prisma.baseDocument.update({
       where: { id },
       data: {
         title: title,
@@ -137,7 +137,7 @@ export async function getPresentation(id: string) {
   // Skip authentication check - allow access without login
 
   try {
-    const presentation = await db.baseDocument.findUnique({
+    const presentation = await prisma.baseDocument.findUnique({
       where: { id },
       include: {
         presentation: true,
@@ -162,7 +162,7 @@ export async function updatePresentationTheme(id: string, theme: string) {
   // Skip authentication check - allow access without login
 
   try {
-    const presentation = await db.presentation.update({
+    const presentation = await prisma.presentation.update({
       where: { id },
       data: { theme },
     });

@@ -2,7 +2,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { db } from "@/server/db";
+import { prisma } from "@/lib/prisma";
 import { type Prisma, DocumentType } from "@prisma/client";
 
 export type PresentationDocument = Prisma.BaseDocumentGetPayload<{
@@ -28,7 +28,7 @@ export async function fetchPresentations(page = 0) {
 
   const skip = page * ITEMS_PER_PAGE;
 
-  const items = await db.baseDocument.findMany({
+  const items = await prisma.baseDocument.findMany({
     where: {
       userId,
       type: DocumentType.PRESENTATION,
@@ -55,7 +55,7 @@ export async function fetchPublicPresentations(page = 0) {
   const skip = page * ITEMS_PER_PAGE;
 
   const [items, total] = await Promise.all([
-    db.baseDocument.findMany({
+    prisma.baseDocument.findMany({
       where: {
         type: DocumentType.PRESENTATION,
         isPublic: true,
@@ -75,7 +75,7 @@ export async function fetchPublicPresentations(page = 0) {
         },
       },
     }),
-    db.baseDocument.count({
+    prisma.baseDocument.count({
       where: {
         type: DocumentType.PRESENTATION,
         isPublic: true,
@@ -100,7 +100,7 @@ export async function fetchUserPresentations(userId: string, page = 0) {
   const skip = page * ITEMS_PER_PAGE;
 
   const [items, total] = await Promise.all([
-    db.baseDocument.findMany({
+    prisma.baseDocument.findMany({
       where: {
         userId,
         type: DocumentType.PRESENTATION,
@@ -118,7 +118,7 @@ export async function fetchUserPresentations(userId: string, page = 0) {
         presentation: true,
       },
     }),
-    db.baseDocument.count({
+    prisma.baseDocument.count({
       where: {
         userId,
         type: DocumentType.PRESENTATION,

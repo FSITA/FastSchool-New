@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { db } from "@/server/db";
+import { prisma } from "@/lib/prisma";
 
 export async function addToFavorites(documentId: string) {
   const supabase = createClient();
@@ -15,7 +15,7 @@ export async function addToFavorites(documentId: string) {
 
   try {
     // Check if already favorited
-    const existing = await db.favoriteDocument.findFirst({
+    const existing = await prisma.favoriteDocument.findFirst({
       where: {
         documentId,
         userId,
@@ -27,7 +27,7 @@ export async function addToFavorites(documentId: string) {
     }
 
     // Add to favorites
-    await db.favoriteDocument.create({
+    await prisma.favoriteDocument.create({
       data: {
         documentId,
         userId,
@@ -52,7 +52,7 @@ export async function removeFromFavorites(documentId: string) {
   const userId = user.id;
 
   try {
-    await db.favoriteDocument.deleteMany({
+    await prisma.favoriteDocument.deleteMany({
       where: {
         documentId,
         userId,
