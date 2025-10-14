@@ -9,20 +9,27 @@ export default async function AuthCallbackPage({
   try {
     const nextParam = Array.isArray(searchParams.next) ? searchParams.next[0] : searchParams.next
     const code = Array.isArray(searchParams.code) ? searchParams.code[0] : searchParams.code
+    const error = Array.isArray(searchParams.error) ? searchParams.error[0] : searchParams.error
 
     // Get the base URL for redirects
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
     const requestUrl = new URL(nextParam ?? '/', baseUrl)
 
+    // Handle OAuth errors
+    if (error) {
+      console.error('OAuth error:', error)
+      redirect('/auth/login?error=Authentication failed')
+    }
+
     if (code) {
       const supabase = createClient()
-      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
       
-      if (!error) {
+      if (!exchangeError) {
         // Redirect to the requested page or home
         redirect(requestUrl.pathname)
       } else {
-        console.error('Auth error:', error)
+        console.error('Auth exchange error:', exchangeError)
         redirect('/auth/login?error=Authentication failed')
       }
     } else {

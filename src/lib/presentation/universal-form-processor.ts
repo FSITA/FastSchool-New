@@ -85,6 +85,10 @@ async function getYoutubeTranscript(
   }
   
   const apiKey = apiKeyMatch[1];
+  if (!apiKey) {
+    throw new Error("API key extraction failed - empty key");
+  }
+  
   console.log(`✅ Found API key: ${apiKey.substring(0, 20)}...`);
 
   console.log(`🔍 Calling YouTube API with key: ${apiKey.substring(0, 20)}...`);

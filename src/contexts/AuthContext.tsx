@@ -37,9 +37,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Get initial session
+    // Get initial session and handle URL session
     const getInitialSession = async () => {
       try {
+        // First, try to get session from URL (for OAuth callbacks)
+        const { data: urlSessionData, error: urlError } = await supabase.auth.getSessionFromUrl({
+          storeSession: true
+        })
+        
+        if (urlSessionData.session && !urlError) {
+          setSession(urlSessionData.session)
+          setUser(urlSessionData.session.user)
+          setLoading(false)
+          return
+        }
+
+        // If no URL session, get current session
         const { data: { session } } = await supabase.auth.getSession()
         setSession(session)
         setUser(session?.user ?? null)
@@ -55,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email)
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
