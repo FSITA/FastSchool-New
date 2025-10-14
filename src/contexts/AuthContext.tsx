@@ -45,21 +45,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('AuthContext: Initializing session...')
         
-        // First, try to get session from URL (for OAuth callbacks)
-        const { data: urlSessionData, error: urlError } = await supabase.auth.getSessionFromUrl({
-          storeSession: true
-        })
-        
-        if (urlSessionData.session && !urlError) {
-          console.log('AuthContext: Session found from URL:', urlSessionData.session.user?.email)
-          setSession(urlSessionData.session)
-          setUser(urlSessionData.session.user)
-          setLoading(false)
-          setInitializing(false)
-          return
+        // Check if getSessionFromUrl is available
+        if (typeof supabase.auth.getSessionFromUrl === 'function') {
+          console.log('AuthContext: Using getSessionFromUrl method...')
+          
+          // First, try to get session from URL (for OAuth callbacks)
+          const { data: urlSessionData, error: urlError } = await supabase.auth.getSessionFromUrl({
+            storeSession: true
+          })
+          
+          if (urlSessionData.session && !urlError) {
+            console.log('AuthContext: Session found from URL:', urlSessionData.session.user?.email)
+            setSession(urlSessionData.session)
+            setUser(urlSessionData.session.user)
+            setLoading(false)
+            setInitializing(false)
+            return
+          }
+        } else {
+          console.log('AuthContext: getSessionFromUrl not available, skipping URL session check')
         }
 
-        // If no URL session, get current session
+        // If no URL session or method not available, get current session
         const { data: { session } } = await supabase.auth.getSession()
         console.log('AuthContext: Current session:', session?.user?.email || 'No session')
         setSession(session)

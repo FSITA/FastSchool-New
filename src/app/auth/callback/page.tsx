@@ -4,16 +4,19 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
+import { AuthDebugger } from '@/components/auth/AuthDebugger'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [message, setMessage] = useState('Processing authentication...')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 3
 
   useEffect(() => {
     let mounted = true
+    let authSubscription: any = null
 
     const handleCallback = async () => {
       try {
@@ -39,47 +42,90 @@ export default function AuthCallbackPage() {
         if (!hasAuthParams && retryCount === 0) {
           console.warn('No auth parameters found in URL - this might indicate a redirect issue')
         }
-        
-        // Try to get session from URL
-        const { data, error } = await supabase.auth.getSessionFromUrl({ 
-          storeSession: true 
-        })
-        
-        if (!mounted) return
 
-        if (error) {
-          console.error('getSessionFromUrl error:', error)
-          console.error('Error details:', {
-            message: error.message,
-            status: error.status,
-            statusText: error.statusText
+        // Debug: Check what methods are available on the auth object
+        console.log('Supabase auth methods:', Object.keys(supabase.auth || {}))
+        console.log('Has getSessionFromUrl?', typeof supabase.auth.getSessionFromUrl)
+        
+        // Method 1: Try getSessionFromUrl if available
+        if (typeof supabase.auth.getSessionFromUrl === 'function') {
+          console.log('Using getSessionFromUrl method...')
+          setMessage('Processing session from URL...')
+          
+          const { data, error } = await supabase.auth.getSessionFromUrl({ 
+            storeSession: true 
           })
           
-          // Retry mechanism for intermittent issues
-          if (retryCount < maxRetries) {
-            console.log(`Retrying... attempt ${retryCount + 1}/${maxRetries}`)
-            setRetryCount(prev => prev + 1)
-            await new Promise(resolve => setTimeout(resolve, 300))
-            handleCallback()
+          if (!mounted) return
+
+          if (error) {
+            console.error('getSessionFromUrl error:', error)
+            console.error('Error details:', {
+              message: error.message,
+              status: error.status,
+              statusText: error.statusText
+            })
+            
+            // Retry mechanism for intermittent issues
+            if (retryCount < maxRetries) {
+              console.log(`Retrying... attempt ${retryCount + 1}/${maxRetries}`)
+              setRetryCount(prev => prev + 1)
+              await new Promise(resolve => setTimeout(resolve, 300))
+              handleCallback()
+              return
+            }
+            
+            setErrorMsg('Authentication failed. Please try again.')
             return
           }
-          
-          setErrorMsg('Authentication failed. Please try again.')
-          return
+
+          if (data.session) {
+            console.log('✅ Session stored successfully via getSessionFromUrl:', {
+              user: data.session.user?.email,
+              expiresAt: data.session.expires_at,
+              provider: data.session.user?.app_metadata?.provider
+            })
+            // Session stored successfully, redirect to intended page
+            router.replace(next)
+            return
+          }
         }
 
-        if (data.session) {
-          console.log('✅ Session stored successfully:', {
-            user: data.session.user?.email,
-            expiresAt: data.session.expires_at,
-            provider: data.session.user?.app_metadata?.provider
-          })
-          // Session stored successfully, redirect to intended page
-          router.replace(next)
-        } else {
-          console.log('❌ No session found in URL')
-          setErrorMsg('No authentication session found. Please try logging in again.')
-        }
+        // Method 2: Fallback to onAuthStateChange if getSessionFromUrl is not available
+        console.log('getSessionFromUrl not available, using onAuthStateChange fallback...')
+        setMessage('Waiting for authentication state...')
+        
+        let authResolved = false
+        
+        // Set up auth state change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (!mounted || authResolved) return
+          
+          console.log('Auth state change in callback:', event, session?.user?.email)
+          
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            authResolved = true
+            console.log('✅ Session established via auth state change:', {
+              user: session?.user?.email,
+              event
+            })
+            router.replace(next)
+          }
+        })
+
+        authSubscription = subscription
+
+        // Set a timeout to fail gracefully
+        setTimeout(() => {
+          if (!mounted || authResolved) return
+          
+          console.log('Auth callback timeout reached')
+          setErrorMsg('Authentication timeout. Please try again.')
+          if (authSubscription) {
+            authSubscription.unsubscribe()
+          }
+        }, 10000) // 10 second timeout
+
       } catch (err) {
         console.error('❌ Callback processing failed:', err)
         setErrorMsg('Authentication callback failed. Please try again.')
@@ -90,6 +136,9 @@ export default function AuthCallbackPage() {
 
     return () => {
       mounted = false
+      if (authSubscription) {
+        authSubscription.unsubscribe()
+      }
     }
   }, [router, searchParams, retryCount])
 
@@ -112,6 +161,7 @@ export default function AuthCallbackPage() {
             </div>
           </div>
         </div>
+        <AuthDebugger />
       </div>
     )
   }
@@ -121,7 +171,7 @@ export default function AuthCallbackPage() {
       <div className="w-full max-w-md space-y-4 text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
         <div className="text-gray-600 dark:text-gray-400">
-          Processing authentication...
+          {message}
         </div>
         {retryCount > 0 && (
           <div className="text-sm text-gray-500">
@@ -129,6 +179,7 @@ export default function AuthCallbackPage() {
           </div>
         )}
       </div>
+      <AuthDebugger />
     </div>
   )
 }
