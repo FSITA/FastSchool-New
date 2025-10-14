@@ -90,6 +90,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         setLoading(false)
         setInitializing(false)
+
+        // Set server-readable session cookie when user signs in
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+          try {
+            console.log('AuthContext: Setting server session cookie...')
+            await fetch('/api/auth/set-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+              }),
+            })
+            console.log('AuthContext: Server session cookie set successfully')
+          } catch (error) {
+            console.error('AuthContext: Error setting server session cookie:', error)
+          }
+        }
       }
     )
 
@@ -100,10 +120,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) {
       return { error: new Error('Authentication not configured') }
     }
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
+    
+    // Set server-readable session cookie for email/password login
+    if (!error && data.session) {
+      try {
+        await fetch('/api/auth/set-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          }),
+        })
+      } catch (cookieError) {
+        console.error('Error setting server session cookie:', cookieError)
+      }
+    }
+    
     return { error: error as Error | null }
   }
 
@@ -123,6 +162,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error('Authentication not configured') }
     }
     const { error } = await supabase.auth.signOut()
+    
+    // Clear server session cookies
+    try {
+      await fetch('/api/auth/set-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          access_token: '',
+          refresh_token: '',
+        }),
+      })
+    } catch (cookieError) {
+      console.error('Error clearing server session cookie:', cookieError)
+    }
+    
     return { error: error as Error | null }
   }
 

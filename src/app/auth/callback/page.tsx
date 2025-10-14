@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
-import { AuthDebugger } from '@/components/auth/AuthDebugger'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -13,6 +12,37 @@ export default function AuthCallbackPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 3
+
+  // Function to set server-readable session cookie
+  const setServerSession = async (session: any) => {
+    try {
+      console.log('Setting server session cookie...')
+      
+      const response = await fetch('/api/auth/set-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Failed to set server session:', errorData)
+        return false
+      }
+
+      const result = await response.json()
+      console.log('✅ Server session set successfully:', result)
+      return true
+    } catch (error) {
+      console.error('Error setting server session:', error)
+      return false
+    }
+  }
 
   useEffect(() => {
     let mounted = true
@@ -85,6 +115,10 @@ export default function AuthCallbackPage() {
               expiresAt: data.session.expires_at,
               provider: data.session.user?.app_metadata?.provider
             })
+            
+            // Set server-readable session cookie
+            await setServerSession(data.session)
+            
             // Session stored successfully, redirect to intended page
             router.replace(next)
             return
@@ -98,7 +132,7 @@ export default function AuthCallbackPage() {
         let authResolved = false
         
         // Set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
           if (!mounted || authResolved) return
           
           console.log('Auth state change in callback:', event, session?.user?.email)
@@ -109,6 +143,12 @@ export default function AuthCallbackPage() {
               user: session?.user?.email,
               event
             })
+            
+            // Set server-readable session cookie
+            if (session) {
+              await setServerSession(session)
+            }
+            
             router.replace(next)
           }
         })
@@ -161,7 +201,6 @@ export default function AuthCallbackPage() {
             </div>
           </div>
         </div>
-        <AuthDebugger />
       </div>
     )
   }
@@ -179,7 +218,6 @@ export default function AuthCallbackPage() {
           </div>
         )}
       </div>
-      <AuthDebugger />
     </div>
   )
 }
