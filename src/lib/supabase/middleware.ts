@@ -43,13 +43,19 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/api') &&
-    request.nextUrl.pathname !== '/'
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Skip auth redirects for auth-related paths and API routes
+  const isAuthPath = request.nextUrl.pathname.startsWith('/auth')
+  const isApiPath = request.nextUrl.pathname.startsWith('/api')
+  const isRootPath = request.nextUrl.pathname === '/'
+  
+  // Allow all auth paths, API paths, and root path without redirect
+  if (isAuthPath || isApiPath || isRootPath) {
+    return supabaseResponse
+  }
+
+  // Only redirect to login if user is not authenticated and trying to access protected routes
+  if (!user) {
+    console.log('Middleware: No user found, redirecting to login from:', request.nextUrl.pathname)
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     url.searchParams.set('redirectTo', request.nextUrl.pathname)

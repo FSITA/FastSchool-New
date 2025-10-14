@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  initializing: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<{ error: Error | null }>
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initializing, setInitializing] = useState(true)
   
   let supabase: any = null
   try {
@@ -34,32 +36,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!supabase) {
       setLoading(false)
+      setInitializing(false)
       return
     }
 
     // Get initial session and handle URL session
     const getInitialSession = async () => {
       try {
+        console.log('AuthContext: Initializing session...')
+        
         // First, try to get session from URL (for OAuth callbacks)
         const { data: urlSessionData, error: urlError } = await supabase.auth.getSessionFromUrl({
           storeSession: true
         })
         
         if (urlSessionData.session && !urlError) {
+          console.log('AuthContext: Session found from URL:', urlSessionData.session.user?.email)
           setSession(urlSessionData.session)
           setUser(urlSessionData.session.user)
           setLoading(false)
+          setInitializing(false)
           return
         }
 
         // If no URL session, get current session
         const { data: { session } } = await supabase.auth.getSession()
+        console.log('AuthContext: Current session:', session?.user?.email || 'No session')
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
+        setInitializing(false)
       } catch (error) {
-        console.warn('Error getting session:', error)
+        console.warn('AuthContext: Error getting session:', error)
         setLoading(false)
+        setInitializing(false)
       }
     }
 
@@ -68,10 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email)
+        console.log('AuthContext: Auth state changed:', event, session?.user?.email)
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
+        setInitializing(false)
       }
     )
 
@@ -112,10 +123,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) {
       return { error: new Error('Authentication not configured') }
     }
+    
+    // Get the current path to redirect back to after auth
+    const currentPath = window.location.pathname
+    const redirectTo = currentPath === '/auth/login' || currentPath === '/auth/register' 
+      ? `${window.location.origin}/auth/callback` 
+      : `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentPath)}`
+    
+    console.log('AuthContext: Initiating Google OAuth with redirectTo:', redirectTo)
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo,
       },
     })
     return { error: error as Error | null }
@@ -145,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     loading,
+    initializing,
     signIn,
     signUp,
     signOut,
