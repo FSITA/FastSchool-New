@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/singleton'
 import type { User, Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
@@ -24,17 +24,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [initializing, setInitializing] = useState(true)
-  
-  let supabase: any = null
-  try {
-    supabase = createClient()
-  } catch (error) {
-    console.warn('Supabase client not configured:', error)
-    setLoading(false)
-  }
 
   useEffect(() => {
     if (!supabase) {
+      console.warn('Supabase client not configured')
       setLoading(false)
       setInitializing(false)
       return
@@ -114,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [supabase])
+  }, [])
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) {

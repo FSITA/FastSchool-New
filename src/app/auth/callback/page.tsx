@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/singleton'
 import { Loader2 } from 'lucide-react'
 
 export default function AuthCallbackPage() {
@@ -50,7 +50,6 @@ export default function AuthCallbackPage() {
 
     const handleCallback = async () => {
       try {
-        const supabase = createClient()
         
         // Get the next parameter for redirect
         const next = searchParams.get('next') ?? '/'

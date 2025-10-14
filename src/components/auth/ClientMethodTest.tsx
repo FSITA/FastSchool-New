@@ -1,13 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/singleton'
 
 export function ClientMethodTest() {
   const [testResults, setTestResults] = useState<any>(null)
 
   useEffect(() => {
-    const supabase = createClient()
     
     const results = {
       clientCreated: !!supabase,

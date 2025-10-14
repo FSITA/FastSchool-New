@@ -1,13 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/singleton'
 
 export function AuthDebugger() {
   const [debugInfo, setDebugInfo] = useState<any>(null)
 
   useEffect(() => {
-    const supabase = createClient()
     
     const info = {
       clientType: 'Browser Client',
