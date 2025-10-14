@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import { uploadToSupabaseStorage } from "@/lib/supabase/storage";
 
 // Define the image model list type
 export type ImageModelList = 
@@ -49,6 +50,7 @@ export async function generateImageAction(prompt: string) {
     console.log("[LOG] Received response from Gemini API.");
 
     let imageBuffer: Buffer;
+    let isPlaceholder = false;
 
     // Check if the API returned any images
     const firstImage = response.generatedImages?.[0];
@@ -89,29 +91,45 @@ export async function generateImageAction(prompt: string) {
         </svg>`;
       
       imageBuffer = Buffer.from(svgContent);
+      isPlaceholder = true;
     }
     console.log(`[LOG] Processed image buffer. Buffer size: ${imageBuffer.length} bytes.`);
 
-    // Generate a unique filename, using .svg for placeholders
-    const fileExtension = firstImage ? 'png' : 'svg';
+    // Generate a unique filename
+    const fileExtension = isPlaceholder ? 'svg' : 'png';
     const filename = `${prompt.substring(0, 20).replace(/[^a-z0-9]/gi, "_")}_${Date.now()}.${fileExtension}`;
     console.log(`[LOG] Generated filename: ${filename}`);
 
-    // Ensure the uploads directory exists
-    const uploadsDir = join(process.cwd(), "public", "uploads");
-    if (!existsSync(uploadsDir)) {
-      console.log(`[LOG] Creating uploads directory at: ${uploadsDir}`);
-      await mkdir(uploadsDir, { recursive: true });
+    // Try to upload to Supabase Storage first
+    const contentType = isPlaceholder ? 'image/svg+xml' : 'image/png';
+    const uploadResult = await uploadToSupabaseStorage(imageBuffer, filename, contentType);
+
+    let permanentUrl: string;
+
+    if (uploadResult.success && uploadResult.url) {
+      // Successfully uploaded to Supabase
+      permanentUrl = uploadResult.url;
+      console.log(`[LOG] Image uploaded to Supabase Storage: ${permanentUrl}`);
+    } else {
+      // Fallback to local storage if Supabase fails
+      console.warn(`[WARN] Supabase upload failed: ${uploadResult.error}. Falling back to local storage.`);
+      
+      // Ensure the uploads directory exists
+      const uploadsDir = join(process.cwd(), "public", "uploads");
+      if (!existsSync(uploadsDir)) {
+        console.log(`[LOG] Creating uploads directory at: ${uploadsDir}`);
+        await mkdir(uploadsDir, { recursive: true });
+      }
+
+      // Save the image file to the public/uploads directory
+      const filePath = join(uploadsDir, filename);
+      await writeFile(filePath, imageBuffer);
+      console.log(`[LOG] Image saved to local filesystem at: ${filePath}`);
+
+      // Create the public URL for the saved image
+      permanentUrl = `/uploads/${filename}`;
+      console.log(`[LOG] Public URL for the image: ${permanentUrl}`);
     }
-
-    // Save the image file to the public/uploads directory
-    const filePath = join(uploadsDir, filename);
-    await writeFile(filePath, imageBuffer);
-    console.log(`[LOG] Image saved to local filesystem at: ${filePath}`);
-
-    // Create the public URL for the saved image
-    const permanentUrl = `/uploads/${filename}`;
-    console.log(`[LOG] Public URL for the image: ${permanentUrl}`);
 
     // Store the image metadata in the database
     console.log("[LOG] Storing image metadata in the database...");

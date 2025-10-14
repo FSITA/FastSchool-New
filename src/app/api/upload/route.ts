@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import { uploadToSupabaseStorage } from "@/lib/supabase/storage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,15 +37,29 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.split('.').pop();
     const fileName = `${timestamp}_${randomString}.${fileExtension}`;
     
-    // Save file to public/uploads directory
-    const filePath = join(uploadsDir, fileName);
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    
-    await writeFile(filePath, buffer);
+    // Try to upload to Supabase Storage first
+    const uploadResult = await uploadToSupabaseStorage(file, fileName, file.type);
 
-    // Return the public URL
-    const fileUrl = `/uploads/${fileName}`;
+    let fileUrl: string;
+
+    if (uploadResult.success && uploadResult.url) {
+      // Successfully uploaded to Supabase
+      fileUrl = uploadResult.url;
+      console.log(`[UPLOAD] File uploaded to Supabase Storage: ${fileUrl}`);
+    } else {
+      // Fallback to local storage if Supabase fails
+      console.warn(`[UPLOAD] Supabase upload failed: ${uploadResult.error}. Falling back to local storage.`);
+      
+      // Save file to public/uploads directory
+      const filePath = join(uploadsDir, fileName);
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      
+      await writeFile(filePath, buffer);
+
+      // Return the public URL
+      fileUrl = `/uploads/${fileName}`;
+    }
 
     return NextResponse.json({
       success: true,
