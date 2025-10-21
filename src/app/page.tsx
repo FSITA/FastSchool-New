@@ -1,5 +1,5 @@
 import { FeatureCard } from '@/components/ui/FeatureCard';
-import { Plus, FileText, Brain, BookOpen } from 'lucide-react';
+import { Plus, FileText, Brain, BookOpen, GitBranch } from 'lucide-react';
 import Image from 'next/image';
 import { UserMenu } from '@/components/user/UserMenu';
 
@@ -27,12 +27,12 @@ export default function Home() {
               Strumenti di Apprendimento basati sull'IA
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Crea presentazioni straordinarie, quiz interattivi, flashcard di studio e piani didattici completi grazie alla potenza dell'intelligenza artificiale
+              Crea presentazioni straordinarie, quiz interattivi, flashcard di studio, piani didattici completi e diagrammi professionali grazie alla potenza dell'intelligenza artificiale
             </p>
           </div>
           
           {/* Feature Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 max-w-7xl mx-auto">
             <div className="opacity-0 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <FeatureCard
                 title="Crea Presentazioni"
@@ -70,6 +70,16 @@ export default function Home() {
                 icon={BookOpen}
                 gradient="bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700"
                 href="/lesson-planner"
+              />
+            </div>
+            
+            <div className="opacity-0 animate-fade-in-up" style={{ animationDelay: '1.0s' }}>
+              <FeatureCard
+                title="Generatore di Diagrammi"
+                description="Crea diagrammi professionali con l'IA."
+                icon={GitBranch}
+                gradient="bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700"
+                href="/diagram-generator"
               />
             </div>
           </div>
