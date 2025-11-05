@@ -22,7 +22,7 @@ export function ShareButton() {
         onClick={() => setIsShareDialogOpen(true)}
       >
         <Share className="mr-1 h-4 w-4" />
-        Share
+        Condividi
       </Button>
 
       <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>

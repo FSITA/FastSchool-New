@@ -78,11 +78,13 @@ const config = {
           DEFAULT: "hsl(var(--brand))",
           foreground: "hsl(var(--brand-foreground))",
         },
+        brandBlue: {
+          DEFAULT: "#0E85F2",
+        },
         highlight: {
           DEFAULT: "hsl(var(--highlight))",
           foreground: "hsl(var(--highlight-foreground))",
         },
-        // Added from QuizAI
         error: "#FB3737",
         success: "#19DB7E",
         dark: "#222222",
@@ -97,7 +99,6 @@ const config = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
-        // Added from QuizAI
         geistmono: ["var(--geistmono)"],
         geistsans: ["var(--geist-sans)"],
       },
@@ -190,7 +191,6 @@ const config = {
     require("tailwindcss-scrollbar"),
     require("@tailwindcss/typography"),
     require("tailwind-scrollbar-hide"),
-    // Added from QuizAI
     require("@tailwindcss/forms"),
   ],
 } satisfies Config;

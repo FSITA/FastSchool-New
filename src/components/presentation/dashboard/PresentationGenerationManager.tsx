@@ -22,6 +22,7 @@ export function PresentationGenerationManager() {
     setSlides,
     setIsGeneratingPresentation,
     setOriginalLanguage,
+    currentPresentationTitle,
   } = usePresentationState();
 
   // Create a ref for the streaming parser to persist between renders
@@ -157,6 +158,7 @@ export function PresentationGenerationManager() {
                 ? sections.map((section: string) => `# ${section}`.trim())
                 : [fullText];
 
+            console.log("Outline Generation: Updating presentation with title:", currentPresentationTitle); // Added log
             void updatePresentation({
               id: currentPresentationId,
               outline: outlineItems,
@@ -239,7 +241,7 @@ export function PresentationGenerationManager() {
 
         console.log("--- Starting Presentation Generation with Manual Fetch ---");
         console.log("Generation Parameters:", {
-          title: presentationInput ?? currentPresentationTitle ?? "",
+          title: currentPresentationTitle ?? presentationInput ?? "",
           outline,
           language,
           tone: presentationStyle,
@@ -251,7 +253,7 @@ export function PresentationGenerationManager() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              title: presentationInput ?? currentPresentationTitle ?? "",
+              title: currentPresentationTitle ?? presentationInput ?? "",
               outline,
               language,
               tone: presentationStyle,
@@ -283,18 +285,47 @@ export function PresentationGenerationManager() {
 
           const { currentPresentationId, theme } =
             usePresentationState.getState();
+          
+          console.log("[DIAGNOSTIC] PresentationGenerationManager: Generation finished", {
+            currentPresentationId,
+            theme,
+            themeType: typeof theme,
+          });
+          
           const parser = streamingParserRef.current;
           parser.finalize();
           parser.clearAllGeneratingMarks();
           const slides = parser.getAllSlides();
 
+          // Log slide data with image information
+          console.log("[DIAGNOSTIC] PresentationGenerationManager: Final slides count:", slides.length);
+          slides.forEach((slide, index) => {
+            console.log(`[DIAGNOSTIC] PresentationGenerationManager: Slide ${index + 1} - rootImage:`, slide.rootImage);
+            // Check for IMG elements in content
+            const imgElements = slide.content?.filter((el: any) => el.type === "img") || [];
+            imgElements.forEach((img: any, imgIdx: number) => {
+              console.log(`[DIAGNOSTIC] PresentationGenerationManager: Slide ${index + 1} - IMG element ${imgIdx + 1}:`, {
+                url: img.url,
+                query: img.query,
+              });
+            });
+          });
+
           if (currentPresentationId) {
-            void updatePresentation({
+            console.log("[DIAGNOSTIC] PresentationGenerationManager: Updating presentation with:", {
+              id: currentPresentationId,
+              title: currentPresentationTitle ?? "",
+              theme,
+              slidesCount: slides.length,
+            });
+            
+            await updatePresentation({
               id: currentPresentationId,
               content: { slides: slides },
               title: currentPresentationTitle ?? "",
               theme,
             });
+            console.log("[DIAGNOSTIC] PresentationGenerationManager: Presentation saved to database successfully");
           }
         } catch (error) {
           console.error("--- ERROR in Presentation Generation (Frontend) ---");

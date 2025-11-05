@@ -42,9 +42,9 @@ export function PresentationControls({
             <SelectValue placeholder="Select number of slides" />
           </SelectTrigger>
           <SelectContent>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 25, 30].map((num) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20].map((num) => (
               <SelectItem key={num} value={String(num)}>
-                {num} slides
+                {num} {num === 1 ? "diapositiva" : "diapositive"}
               </SelectItem>
             ))}
           </SelectContent>
@@ -113,7 +113,7 @@ export function PresentationControls({
           <SelectContent>
             <SelectItem value="default">
               <div className="flex items-center gap-3">
-                <span>Default</span>
+                <span>Predefinito</span>
               </div>
             </SelectItem>
             <SelectItem value="traditional">

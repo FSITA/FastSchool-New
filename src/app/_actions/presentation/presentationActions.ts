@@ -24,7 +24,7 @@ export async function createPresentation(
       data: {
         type: "PRESENTATION",
         documentType: "presentation",
-        title: title ?? "Untitled Presentation",
+        title: title ?? "Presentazione FastSchool senza titolo",
         userId,
         presentation: {
           create: {
@@ -89,8 +89,37 @@ export async function updatePresentation({
   // Skip authentication check - allow access without login
 
   try {
+    console.log("[DIAGNOSTIC] updatePresentation: Called with params:", {
+      id,
+      title,
+      theme,
+      hasContent: !!content,
+      slidesCount: (content as any)?.slides?.length,
+      outlineLength: outline?.length,
+    });
+    
+    // Log image data in slides if content exists
+    if (content && (content as any).slides) {
+      const slides = (content as any).slides;
+      console.log("[DIAGNOSTIC] updatePresentation: Slides being saved:", slides.length);
+      slides.forEach((slide: any, index: number) => {
+        console.log(`[DIAGNOSTIC] updatePresentation: Slide ${index + 1} data:`, {
+          hasRootImage: !!slide.rootImage,
+          rootImageUrl: slide.rootImage?.url,
+          rootImageQuery: slide.rootImage?.query,
+          contentElements: slide.content?.map((el: any) => ({
+            type: el.type,
+            hasUrl: el.type === "img" ? !!el.url : undefined,
+            hasQuery: el.type === "img" ? !!el.query : undefined,
+          })) || [],
+        });
+      });
+    }
+    
     // Extract values from content if provided there
     const effectiveTheme = theme;
+    console.log("[DIAGNOSTIC] updatePresentation: Effective theme being saved:", effectiveTheme);
+    
     const effectiveImageModel = imageModel;
     const effectivePresentationStyle = presentationStyle;
     const effectiveLanguage = language;
@@ -115,6 +144,8 @@ export async function updatePresentation({
         presentation: true,
       },
     });
+    
+    console.log("[DIAGNOSTIC] updatePresentation: Database update completed, saved theme:", presentation.presentation?.theme);
 
     return {
       success: true,
@@ -180,4 +211,3 @@ export async function updatePresentationTheme(id: string, theme: string) {
     };
   }
 }
-

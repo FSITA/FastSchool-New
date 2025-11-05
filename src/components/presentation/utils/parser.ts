@@ -401,26 +401,8 @@ export class SlideParser {
       this.sectionIdMap.set(sectionContent, slideId);
     }
 
-    // Extract layout type from SECTION attributes
-    let layoutType: LayoutType | undefined = undefined;
-    const layoutAttr = sectionNode.attributes.layout;
-
-    if (layoutAttr) {
-      // Validate that the layout attribute is one of our allowed values
-      if (
-        layoutAttr === "left" ||
-        layoutAttr === "right" ||
-        layoutAttr === "vertical"
-      ) {
-        layoutType = layoutAttr as LayoutType;
-      } else {
-        // Default to "left" if we get an invalid layout value
-        console.warn(
-          `Invalid layout type "${layoutAttr}", defaulting to "left"`
-        );
-        layoutType = "left";
-      }
-    }
+    // Force layout type to "vertical" (image at top) for all slides
+    const layoutType: LayoutType = "vertical";
 
     // Process each child of SECTION as a separate top-level element
     const plateElements: PlateNode[] = [];

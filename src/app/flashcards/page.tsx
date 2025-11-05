@@ -5,38 +5,44 @@ import { ArrowLeft } from 'lucide-react'
 
 export default function FlashcardsPage() {
   return (
-    <main className="relative min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header with Logo and Home Button */}
-      <div className="pt-8 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
-            {/* Home Button */}
-            <Link 
-              href="/"
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Casa
-            </Link>
-            
-            {/* Logo */}
-            <div className="flex-1 flex justify-center">
-              <Image
-                src="/fastschool logo on white.png"
-                alt="FastSchool Logo"
-                width={200}
-                height={60}
-                className="h-12 w-auto"
-              />
-            </div>
-            
-            {/* Spacer for balance */}
-            <div className="w-24"></div>
-          </div>
+      <header className="relative max-w-4xl mx-auto px-6 pt-8 pb-8">
+        <div className="flex flex-col items-center relative">
+          {/* Home Button */}
+          <Link 
+            href="/"
+            className="absolute top-0 left-0 flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-[#1A1A1A]"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Casa
+          </Link>
+          
+          {/* Logo */}
+          <Link href="/" className="inline-block mb-6">
+            <Image
+              src="/fastschool logo on white.png"
+              alt="FastSchool Logo"
+              width={300}
+              height={90}
+              className="h-16 w-auto opacity-90"
+            />
+          </Link>
+
+          {/* Two-line Heading */}
+          <h1 className="text-4xl font-bold text-[#1A1A1A] mb-3 tracking-tight text-center">
+            Generatore di Flashcard IA
+          </h1>
+          <p className="text-lg text-[#5A5A5A] font-normal text-center max-w-2xl">
+            Crea flashcard interattive per studiare in modo efficace
+          </p>
         </div>
-      </div>
-      
-      <FlashcardGenerator />
-    </main>
+      </header>
+
+      {/* Main Content - White rounded rectangle with form */}
+      <main className="max-w-4xl mx-auto px-6 pb-12">
+        <FlashcardGenerator />
+      </main>
+    </div>
   )
 }

@@ -3,12 +3,13 @@ import "./globals.css";
 import { ThemeProvider } from "@/provider/theme-provider";
 import TanStackQueryProvider from "@/provider/TanstackProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { GeistMono, GeistSans } from "@/assets/quiz";
+import { GeistMono, GeistSans } from "@/assets/fonts";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "FastSchool | Apprendimento basato sull'IA",
   description:
-    "Genera quiz e presentazioni dai tuoi appunti usando l'IA.",
+    "Genera presentazioni, flashcard, piani didattici e lezioni dai tuoi appunti usando l'IA.",
 };
 
 export default async function RootLayout({
@@ -19,12 +20,13 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${GeistSans.className} ${GeistMono.variable} bg-gray-50 text-zinc-800 antialiased`}
+        className={`${GeistSans.className} ${GeistMono.variable} text-[#1A1A1A] antialiased`}
       >
         <TanStackQueryProvider>
           <AuthProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
               {children}
+              <Toaster />
             </ThemeProvider>
           </AuthProvider>
         </TanStackQueryProvider>

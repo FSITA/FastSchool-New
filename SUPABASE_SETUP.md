@@ -64,7 +64,7 @@ If you want to enable Google OAuth:
    - Test Google OAuth (if configured)
 
 3. **Test AI Features:**
-   - All 4 AI features (Presentations, Quizzes, Flashcards, Lesson Planner) now require authentication
+   - All AI features (Presentations, Flashcards, Lesson Planner, Lesson Generator, Diagram Generator) now require authentication
    - Make sure you can access them after logging in
 
 ## Migration Notes

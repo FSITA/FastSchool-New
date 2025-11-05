@@ -18,6 +18,7 @@ import { OutlineItem } from "./OutlineItem";
 import { Plus } from "lucide-react";
 import { usePresentationState } from "@/states/presentation-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { updatePresentation } from "@/app/_actions/presentation/presentationActions";
 
 interface OutlineItemType {
   id: string;
@@ -30,6 +31,8 @@ export function OutlineList() {
     setOutline,
     numSlides,
     isGeneratingOutline,
+    currentPresentationId,
+    setCurrentPresentation,
   } = usePresentationState();
 
   const [items, setItems] = useState<OutlineItemType[]>(
@@ -70,7 +73,7 @@ export function OutlineList() {
     }
   }
 
-  const handleTitleChange = (id: string, newTitle: string) => {
+  const handleTitleChange = async (id: string, newTitle: string) => {
     setItems((items) => {
       const newItems = items.map((item) =>
         item.id === id ? { ...item, title: newTitle } : item,
@@ -79,6 +82,23 @@ export function OutlineList() {
       setOutline(newItems.map((item) => item.title));
       return newItems;
     });
+    
+    // If this is the first outline item (id === "1"), update the presentation title
+    if (currentPresentationId && id === "1") {
+      // Update the current presentation title in the store
+      setCurrentPresentation(currentPresentationId, newTitle);
+      
+      // Also update the title in the database
+      try {
+        await updatePresentation({
+          id: currentPresentationId,
+          title: newTitle,
+        });
+        console.log("Presentation title updated in database:", newTitle);
+      } catch (error) {
+        console.error("Failed to update presentation title in database:", error);
+      }
+    }
   };
 
   const handleAddCard = () => {

@@ -17,7 +17,7 @@ export function SlidePreview({
 
   return (
     <div className="flex flex-col space-y-4 p-4">
-      <h2 className="mb-2 text-sm font-semibold">Slides</h2>
+      <h2 className="mb-2 text-sm font-semibold">Diapositive</h2>
       <div className="flex flex-col space-y-4">
         {slides.map((slide, index) => (
           <div

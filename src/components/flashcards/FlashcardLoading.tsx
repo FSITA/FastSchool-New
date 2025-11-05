@@ -9,7 +9,7 @@ export default function FlashcardLoading() {
         alt="Generating flashcards..."
         unoptimized
       />
-      <p className="text-sm text-muted-foreground mt-4">Generating your flashcards...</p>
+      <p className="text-sm text-muted-foreground mt-4">Generazione delle tue flashcard...</p>
     </div>
   );
 }

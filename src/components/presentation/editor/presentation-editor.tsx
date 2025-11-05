@@ -148,7 +148,7 @@ const PresentationEditor = ({
           }, 0);
         }
       }
-    }, [initialContent?.id, initialContent?.content, initialContent?.bgColor, initialContent?.alignment, initialContent?.rootImage, initialContent?.layoutType, initialContent?.width]);
+    }, [initialContent?.id, initialContent?.content, initialContent?.bgColor, initialContent?.alignment, initialContent?.layoutType, initialContent?.width, editor]);
 
     useEffect(() => {
       if (isGenerating && initialContent) {
@@ -188,7 +188,7 @@ const PresentationEditor = ({
         {!readOnly && <FixedToolbar />}
         
         <div
-          key={`${initialContent?.id}-${initialContent?.bgColor}-${initialContent?.alignment}-${initialContent?.layoutType}-${initialContent?.width}-${JSON.stringify(initialContent?.rootImage)}`}
+          key={`${initialContent?.id}-${initialContent?.bgColor}-${initialContent?.alignment}-${initialContent?.layoutType}-${initialContent?.width}-${initialContent?.rootImage?.query || ''}`}
           className={cn(
             "flex min-h-[500px]",
             "scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 overflow-hidden p-0 scrollbar-w-1 scrollbar-track-transparent",
@@ -279,7 +279,7 @@ const areEqual = (prevProps: PresentationEditorProps, nextProps: PresentationEdi
       prev.alignment !== next.alignment ||
       prev.layoutType !== next.layoutType ||
       prev.width !== next.width ||
-      JSON.stringify(prev.rootImage) !== JSON.stringify(next.rootImage) ||
+      prev.rootImage?.query !== next.rootImage?.query ||
       JSON.stringify(prev.content) !== JSON.stringify(next.content)
     ) {
       return false;

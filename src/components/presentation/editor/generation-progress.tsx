@@ -32,13 +32,12 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
           <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
         </div>
         <div className="text-sm font-medium">
-          Generating presentation...
+          Generazione presentazione...
         </div>
         <div className="text-xs text-muted-foreground">
-          {slides.length} slide{slides.length !== 1 ? "s" : ""} created
+          {slides.length} {slides.length === 1 ? "diapositiva" : "diapositive"} create
         </div>
       </div>
     </div>
   );
 };
-

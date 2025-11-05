@@ -5,6 +5,9 @@ export interface LessonPlan {
   materials?: string;
   objectives?: string;
   outline?: string;
+  isSpecialNeeds?: boolean;
+  disabilityType?: string;
+  language?: string;
 }
 
 export interface LessonPlanSection {
@@ -17,4 +20,18 @@ export interface LessonPlanViewerProps {
   lessonPlan: LessonPlan;
   generatedContent: string;
   onGenerateAgain: () => void;
+}
+
+export interface TimelineRow {
+  duration: string;
+  activity: string;
+  instructions: string;
+  teacherNotes: string;
+}
+
+export interface TimelineParseResult {
+  success: boolean;
+  rows: TimelineRow[];
+  error?: string;
+  fallbackContent?: string;
 }

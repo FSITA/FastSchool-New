@@ -3,8 +3,10 @@
 import { useState } from "react";
 import FlashcardUniversalForm from "./FlashcardUniversalForm";
 import FlashcardSettingsForm from "./FlashcardSettingsForm";
-import FormField from "@/components/quiz/pages/FormField";
+import ContentExtractionNotificationBar from "@/components/shared/ContentExtractionNotificationBar";
 import { toast } from "sonner";
+import type { ProcessedContent } from "@/lib/presentation/universal-form-processor";
+
 // Removed client-side processing - now using server-side API
 export default function FlashcardUniversalFormContainer({
   generateFlashcards,
@@ -12,6 +14,9 @@ export default function FlashcardUniversalFormContainer({
   generateFlashcards: (text: string, count: number, language?: string, gradeLevel?: string) => Promise<void>;
 }) {
   const [universalFormData, setUniversalFormData] = useState<FormData | null>(null);
+  const [extractedContent, setExtractedContent] = useState<ProcessedContent | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionError, setExtractionError] = useState<string>("");
   const [formStep, setFormStep] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [flashcardCount, setFlashcardCount] = useState(10);
@@ -20,60 +25,66 @@ export default function FlashcardUniversalFormContainer({
     console.log("🔄 handleUniversalFormNext called");
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    console.log("📝 Universal form data collected:", {
-      notes: formData.get("notes"),
-      files: formData.getAll("files"),
-      youtubeUrl: formData.get("youtubeUrl"),
-      wikipediaLink: formData.get("wikipediaLink"),
-      gradeLevel: formData.get("gradeLevel"),
-      language: formData.get("language"),
-    });
     setUniversalFormData(formData);
-    setFormStep(1);
-    console.log("✅ Moved to step 1 (settings form)");
+    setExtractionError("");
+    setIsExtracting(true);
+
+    try {
+      // Determine source type for loading message
+      const step = formData.get("step") as string;
+      const activeStep = step ? parseInt(step, 10) : -1;
+      let sourceType: "PDF" | "YouTube" | "Wikipedia" | "Notes" | "Files" | undefined;
+      
+      if (activeStep === 0) sourceType = "Notes";
+      else if (activeStep === 1) sourceType = "PDF";
+      else if (activeStep === 2) sourceType = "YouTube";
+      else if (activeStep === 3) sourceType = "Wikipedia";
+
+      // Call extraction API
+      const response = await fetch('/api/universal-form/extract-content', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to extract content' }));
+        throw new Error(errorData.details || errorData.error || 'Failed to extract content');
+      }
+
+      const processedData: ProcessedContent = await response.json();
+      setExtractedContent(processedData);
+      setIsExtracting(false);
+      setFormStep(1);
+      toast.success('Contenuto estratto con successo!');
+    } catch (error) {
+      console.error('Error extracting content:', error);
+      setIsExtracting(false);
+      const errorMsg = error instanceof Error ? error.message : 'Errore durante l\'estrazione del contenuto';
+      setExtractionError(errorMsg);
+      toast.error(errorMsg);
+    }
   };
 
   const handleGenerateFlashcards = async () => {
     console.log("🚀 handleGenerateFlashcards called");
-    console.log("📊 Current state:", {
-      universalFormData: !!universalFormData,
-      flashcardCount,
-      formStep
-    });
-    
     setErrorMessage("");
 
-    if (!universalFormData) {
-      console.log("❌ No universal form data found");
+    if (!extractedContent) {
+      console.log("❌ No extracted content found");
       toast.error("Please complete the first step");
       return;
     }
 
     try {
-      console.log("🔄 Processing universal form data on server...");
-      
-      // Send form data to server for processing (handles YouTube, PDF, etc.)
-      const response = await fetch('/api/flashcards/process-content', {
-        method: 'POST',
-        body: universalFormData
+      console.log("✅ Using pre-extracted content:", {
+        contentLength: extractedContent.content.length,
+        gradeLevel: extractedContent.gradeLevel,
+        language: extractedContent.language,
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to process content');
-      }
-      
-      const processedData = await response.json();
-      console.log("✅ Universal form data processed:", {
-        contentLength: processedData.content.length,
-        gradeLevel: processedData.gradeLevel,
-        language: processedData.language,
-        contentPreview: processedData.content.substring(0, 100) + "..."
-      });
-      
-      console.log("🔄 Generating flashcards with count:", flashcardCount, "language:", processedData.language, "and grade level:", processedData.gradeLevel);
-      // Generate flashcards using the processed content, current count, selected language, and grade level
-      await generateFlashcards(processedData.content, flashcardCount, processedData.language, processedData.gradeLevel);
+      console.log("🔄 Generating flashcards with count:", flashcardCount, "language:", extractedContent.language, "and grade level:", extractedContent.gradeLevel);
+      // Generate flashcards using the pre-extracted content
+      await generateFlashcards(extractedContent.content, flashcardCount, extractedContent.language, extractedContent.gradeLevel);
       console.log("✅ Flashcards generated successfully!");
       
     } catch (error) {
@@ -83,10 +94,48 @@ export default function FlashcardUniversalFormContainer({
     }
   };
 
+  // Determine source type for extraction loader
+  const getExtractionSourceType = (): "PDF" | "YouTube" | "Wikipedia" | "Notes" | "Files" | undefined => {
+    if (!universalFormData) return undefined;
+    const step = universalFormData.get("step") as string;
+    const activeStep = step ? parseInt(step, 10) : -1;
+    if (activeStep === 0) return "Notes";
+    else if (activeStep === 1) return "PDF";
+    else if (activeStep === 2) return "YouTube";
+    else if (activeStep === 3) return "Wikipedia";
+    return undefined;
+  };
+
   return (
     <section>
-      {formStep === 0 && <FlashcardUniversalForm onSubmit={handleUniversalFormNext} />}
-      {formStep === 1 && <FlashcardSettingsForm onSubmit={handleGenerateFlashcards} count={flashcardCount} setCount={setFlashcardCount} />}
+      {formStep === 0 && !isExtracting && (
+        <FlashcardUniversalForm onSubmit={handleUniversalFormNext} />
+      )}
+
+      {/* Show step 2 form even during extraction */}
+      {(formStep === 1 || isExtracting) && (
+        <FlashcardSettingsForm 
+          onSubmit={handleGenerateFlashcards} 
+          count={flashcardCount} 
+          setCount={setFlashcardCount}
+          isExtracting={isExtracting}
+        />
+      )}
+
+      {/* Show extraction notification bar at top-right */}
+      {isExtracting && (
+        <ContentExtractionNotificationBar sourceType={getExtractionSourceType()} />
+      )}
+
+      {/* Show extraction error if any */}
+      {extractionError && !isExtracting && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5 fade-in duration-300">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg max-w-md">
+            <strong className="font-bold">Errore: </strong>
+            <span>{extractionError}</span>
+          </div>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mt-4 max-w-lg mx-auto">

@@ -26,11 +26,11 @@ export const IMAGE_MODELS: { value: ImageModelList; label: string }[] = [
 ];
 
 const PRESENTATION_STYLES = [
-  { value: "professional", label: "Professional" },
-  { value: "creative", label: "Creative" },
-  { value: "minimal", label: "Minimal" },
-  { value: "bold", label: "Bold" },
-  { value: "elegant", label: "Elegant" },
+  { value: "professional", label: "Professionale" },
+  { value: "creative", label: "Creativo" },
+  { value: "minimal", label: "Minimale" },
+  { value: "bold", label: "Audace" },
+  { value: "elegant", label: "Elegante" },
 ];
 
 export function ThemeSettings() {
@@ -42,9 +42,9 @@ export function ThemeSettings() {
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">Theme & Layout</Label>
+          <Label className="text-sm font-medium">Tema e Layout</Label>
           <ThemeModal>
-            <Button variant={"link"}>More Themes</Button>
+            <Button variant={"link"}>Altri Temi</Button>
           </ThemeModal>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -127,7 +127,7 @@ export function ThemeSettings() {
       {/* Image model selection removed - using Gemini for all image generation */}
 
       <div className="space-y-4">
-        <Label className="text-sm font-medium">Presentation Style</Label>
+        <Label className="text-sm font-medium">Stile Presentazione</Label>
         <Select value={presentationStyle} onValueChange={setPresentationStyle}>
           <SelectTrigger>
             <SelectValue placeholder="Select style" />

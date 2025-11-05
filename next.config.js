@@ -20,7 +20,7 @@ const config = {
   },
   // Add this for Render.com compatibility
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
+    serverComponentsExternalPackages: ['@prisma/client', 'pdf-parse'],
   },
   // Ensure proper server configuration for Render.com
   serverRuntimeConfig: {

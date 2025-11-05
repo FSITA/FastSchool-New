@@ -43,12 +43,12 @@ export function PresentationDashboard() {
       // Clear universal form data to ensure blank presentation
       setUniversalFormData(null);
       // Set a default presentation input for blank presentations
-      setPresentationInput("Untitled Presentation");
+      setPresentationInput("Presentazione FastSchool senza titolo");
       // Mark that this is NOT from universal form (allows language selection)
       setIsFromUniversalForm(false);
       // Don't set isGeneratingOutline to true for blank presentations
       // This allows users to manually create their own outline
-      const result = await createEmptyPresentation("Untitled Presentation");
+      const result = await createEmptyPresentation("Presentazione FastSchool senza titolo");
       if (result.success && result.presentation) {
         setCurrentPresentation(
           result.presentation.id,
@@ -65,61 +65,60 @@ export function PresentationDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen w-full bg-white">
       {/* Header with Logo and Home Button */}
-      <div className="pt-8 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center mb-8">
-            {/* Home Button */}
-            <Link 
-              href="/"
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Casa
-            </Link>
-            
-            {/* Logo */}
-            <div className="flex-1 flex justify-center">
-              <Image
-                src="/fastschool logo on white.png"
-                alt="FastSchool Logo"
-                width={200}
-                height={60}
-                className="h-12 w-auto"
-              />
+      <header className="relative max-w-4xl mx-auto px-6 pt-8 pb-8">
+        <div className="flex flex-col items-center relative">
+          {/* Home Button */}
+          <Link 
+            href="/"
+            className="absolute top-0 left-0 flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-[#1A1A1A]"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Casa
+          </Link>
+          
+          {/* Logo */}
+          <Link href="/" className="inline-block mb-6">
+            <Image
+              src="/fastschool logo on white.png"
+              alt="FastSchool Logo"
+              width={300}
+              height={90}
+              className="h-16 w-auto opacity-90"
+            />
+          </Link>
+
+          {/* Two-line Heading */}
+          <h1 className="text-4xl font-bold text-[#1A1A1A] mb-3 tracking-tight text-center">
+            Generatore di Presentazioni IA
+          </h1>
+          <p className="text-lg text-[#5A5A5A] font-normal text-center max-w-2xl">
+            Genera slide straordinarie basate sull'IA istantaneamente
+          </p>
+        </div>
+      </header>
+
+      {/* Main Content - White rounded rectangle with form */}
+      <main className="max-w-4xl mx-auto px-6 pb-12">
+        <div className="space-y-8">
+          <UniversalFormContainer />
+          <div className="flex items-center justify-end">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCreateBlank}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Crea Vuoto
+              </Button>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="notebook-section relative w-full">
-        <div className="mx-auto w-full max-w-4xl space-y-12 px-6 py-12">
-          <div className="text-center">
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">
-              Presentazione IA
-            </h1>
-          </div>
-
-          <div className="space-y-8">
-            <UniversalFormContainer />
-            <div className="flex items-center justify-end">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleCreateBlank}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Crea Vuoto
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <PresentationTemplates />
-        </div>
-      </div>
+        <PresentationTemplates />
+      </main>
     </div>
   );
 }

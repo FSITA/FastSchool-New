@@ -51,7 +51,7 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
       {/* Progress Indicator */}
       <div className="flex items-center justify-center gap-4">
         <div className="text-sm text-muted-foreground">
-          Card {currentIndex + 1} of {flashcards.length}
+          Carta {currentIndex + 1} di {flashcards.length}
         </div>
         <div className="flex-1 max-w-xs bg-muted rounded-full h-2">
           <div
@@ -77,14 +77,14 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
               <CardContent className="p-8 h-full flex items-center justify-center">
                 <div className="text-center space-y-4">
                   <div className="text-sm font-medium text-primary uppercase tracking-wide">
-                    Question
+                    Domanda
                   </div>
                   <div className="text-lg md:text-xl text-card-foreground text-balance leading-relaxed">
                     {currentCard.question}
                   </div>
                   <div className="text-sm text-muted-foreground flex items-center justify-center gap-2">
                     <RotateCcw className="h-4 w-4" />
-                    Click to reveal answer
+                    Clicca per rivelare la risposta
                   </div>
                 </div>
               </CardContent>
@@ -95,14 +95,14 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
               <CardContent className="p-8 h-full flex items-center justify-center">
                 <div className="text-center space-y-4">
                   <div className="text-sm font-medium text-primary uppercase tracking-wide">
-                    Answer
+                    Risposta
                   </div>
                   <div className="text-lg md:text-xl text-card-foreground text-balance leading-relaxed">
                     {currentCard.answer}
                   </div>
                   <div className="text-sm text-muted-foreground flex items-center justify-center gap-2">
                     <RotateCcw className="h-4 w-4" />
-                    Click to see question
+                    Clicca per vedere la domanda
                   </div>
                 </div>
               </CardContent>
@@ -120,12 +120,12 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
           className="border-border text-foreground hover:bg-accent bg-transparent"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
-          Previous
+          Precedente
         </Button>
 
         <Button onClick={handleFlip} className="bg-primary hover:bg-primary/90 text-primary-foreground">
           <RotateCcw className="h-4 w-4 mr-2" />
-          Flip Card
+          Capovolgi Carta
         </Button>
 
         <Button
@@ -134,14 +134,14 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
           variant="outline"
           className="border-border text-foreground hover:bg-accent bg-transparent"
         >
-          Next
+          Successivo
           <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
       </div>
 
       {/* Card Grid Preview */}
       <div className="mt-8">
-        <h3 className="text-lg font-semibold text-foreground mb-4">All Cards</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">Tutte le carte</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {flashcards.map((card, index) => (
             <Card
@@ -155,7 +155,7 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
               }}
             >
               <CardContent className="p-4">
-                <div className="text-xs font-medium text-primary mb-2">Card {index + 1}</div>
+                <div className="text-xs font-medium text-primary mb-2">Carta {index + 1}</div>
                 <div className="text-sm text-card-foreground line-clamp-3">{card.question}</div>
               </CardContent>
             </Card>

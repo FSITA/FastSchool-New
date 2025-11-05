@@ -251,3 +251,737 @@ h6.presentation-heading {
 .presentation-slide[style*="background"] {
   background-color: var(--presentation-background) !important;
 }
+
+/* ============================================
+   PRINT / PDF EXPORT STYLES
+   ============================================ */
+
+@media print {
+  /* ============================================
+     Hide UI Elements
+     ============================================ */
+  button,
+  header,
+  nav,
+  aside,
+  .print\:hidden,
+  [data-print-hidden="true"],
+  [class*="print:hidden"],
+  .group-hover {
+    display: none !important;
+  }
+
+  /* Hide preview sidebar (right side panel) */
+  /* Hide Resizable component (preview sidebar) */
+  [class*="Resizable"],
+  [class*="resizable"],
+  /* Hide the container that wraps the preview sidebar */
+  .flex.h-full.items-center:first-child,
+  .flex.h-full > .flex.h-full.items-center,
+  /* Hide SlidePreview component and its children */
+  [id^="slide-preview-"],
+  /* Hide any preview renderer components */
+  [class*="SlidePreviewRenderer"],
+  [class*="slide-preview"],
+  /* Hide the resizable handle/grip */
+  [class*="grip"],
+  [class*="Grip"],
+  /* Hide any resizable-related elements */
+  .group\/resize {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* ============================================
+     Page Setup - One Slide Per Page
+     ============================================ */
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+
+  /* ============================================
+     Root Container - SHOW ALL CONTENT
+     ============================================ */
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Force all parent containers to show all content */
+  #__next,
+  main,
+  .sheet-container,
+  [class*="PresentationLayout"],
+  [class*="ThemeBackground"] {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+    position: static !important;
+    display: block !important;
+  }
+
+  /* Hide preview sidebar completely */
+  .flex.h-full > .flex.h-full.items-center {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  /* Main slides container - FULL WIDTH, SHOW ALL */
+  .presentation-slides {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    width: 100% !important;
+    flex: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  /* Flex container - make it block */
+  .flex.h-full {
+    display: block !important;
+    height: auto !important;
+  }
+
+  /* ============================================
+     Slide Wrapper - ONE PER PAGE, ALL VISIBLE
+     ============================================ */
+  .slide-wrapper {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    transform: none !important;
+    clip: auto !important;
+    clip-path: none !important;
+  }
+
+  .slide-wrapper:last-child {
+    page-break-after: auto !important;
+  }
+
+  /* ============================================
+     Slide Container - PRESERVE LAYOUT
+     ============================================ */
+  .slide-container,
+  [class*="slide-container"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    position: relative !important;
+  }
+
+  /* ============================================
+     Presentation Slide - MAIN CONTENT AREA
+     ============================================ */
+  .presentation-slide,
+  [data-slide-content="true"] {
+    width: 100% !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    background-color: white !important;
+    color: black !important;
+    padding: 2rem !important;
+    margin: 0 !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+  }
+
+  .presentation-slide:last-child {
+    page-break-after: auto !important;
+  }
+
+  /* ============================================
+     Complete Font Stack with Theme Support
+     ============================================ */
+  body,
+  .presentation-slide,
+  [data-slate-editor="true"],
+  .ProseMirror,
+  .presentation-element,
+  .presentation-text,
+  .presentation-heading,
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  span,
+  div,
+  li,
+  td,
+  th {
+    font-family: var(--presentation-body-font, "Inter"),
+      var(--presentation-heading-font, "Inter"),
+      /* Latin & Cyrillic */
+      "Segoe UI",
+      "Roboto",
+      "Helvetica Neue",
+      Arial,
+      sans-serif,
+      /* Chinese Simplified */
+      "Microsoft YaHei",
+      "SimHei",
+      "SimSun",
+      "KaiTi",
+      "FangSong",
+      /* Chinese Traditional */
+      "Microsoft JhengHei",
+      "PMingLiU",
+      "MingLiU",
+      /* Japanese */
+      "Yu Gothic",
+      "Meiryo",
+      "MS PGothic",
+      "MS PMincho",
+      /* Korean */
+      "Malgun Gothic",
+      "Apple SD Gothic Neo",
+      "Nanum Gothic",
+      /* Arabic */
+      "Segoe UI Arabic",
+      "Tahoma",
+      "Arial Unicode MS",
+      /* Hebrew */
+      "Segoe UI Hebrew",
+      "Arial Hebrew",
+      /* Devanagari (Hindi) */
+      "Nirmala UI",
+      "Mangal",
+      /* Thai */
+      "Leelawadee UI",
+      "Sathu",
+      /* Vietnamese */
+      "Segoe UI",
+      "Arial",
+      /* Universal fallbacks */
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Noto Sans",
+      "Noto Sans CJK SC",
+      "Noto Sans CJK TC",
+      "Noto Sans JP",
+      "Noto Sans KR",
+      "Noto Sans Arabic",
+      sans-serif !important;
+  }
+
+  /* Specific heading font stack */
+  .presentation-heading,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--presentation-heading-font, "Inter"),
+      "Segoe UI",
+      "Roboto",
+      "Helvetica Neue",
+      Arial,
+      sans-serif,
+      "Microsoft YaHei",
+      "SimHei",
+      "Microsoft JhengHei",
+      "Yu Gothic",
+      "Malgun Gothic",
+      "Segoe UI Arabic",
+      "Nirmala UI",
+      system-ui,
+      sans-serif !important;
+    font-weight: 700;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ============================================
+     RTL (Right-to-Left) Language Support
+     ============================================ */
+  [dir="rtl"],
+  [lang="ar"],
+  [lang="he"],
+  [lang="fa"],
+  [lang="ur"] {
+    direction: rtl;
+    text-align: right;
+    font-family: "Segoe UI Arabic",
+      "Tahoma",
+      "Arial Unicode MS",
+      "Segoe UI Hebrew",
+      "Arial Hebrew",
+      system-ui,
+      sans-serif !important;
+  }
+
+  /* ============================================
+     CJK (Chinese, Japanese, Korean) Support
+     ============================================ */
+  [lang="zh"],
+  [lang="zh-CN"],
+  [lang="zh-TW"],
+  [lang="ja"],
+  [lang="ko"] {
+    font-family: "Microsoft YaHei",
+      "SimHei",
+      "SimSun",
+      "Microsoft JhengHei",
+      "PMingLiU",
+      "Yu Gothic",
+      "Meiryo",
+      "MS PGothic",
+      "Malgun Gothic",
+      "Apple SD Gothic Neo",
+      "Noto Sans CJK SC",
+      "Noto Sans CJK TC",
+      "Noto Sans JP",
+      "Noto Sans KR",
+      system-ui,
+      sans-serif !important;
+    letter-spacing: 0;
+    word-spacing: normal;
+  }
+
+  /* ============================================
+     Color and Background Control for Print
+     ============================================ */
+  * {
+    color-adjust: exact;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Ensure slides have white background and black text for print */
+  .presentation-slide,
+  [data-slide-content="true"] {
+    background-color: white !important;
+    color: black !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* Remove visual effects for print */
+  * {
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Remove gradient from headings for print */
+  .presentation-heading {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: unset !important;
+    background-clip: unset !important;
+    color: black !important;
+  }
+
+  /* ============================================
+     Layout Types - PRESERVE STRUCTURE
+     ============================================ */
+  /* Right layout: text left, image right */
+  .presentation-slide.flex-row {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 2rem !important;
+  }
+
+  /* Left layout: image left, text right */
+  .presentation-slide.flex-row-reverse {
+    flex-direction: row-reverse !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 2rem !important;
+  }
+
+  /* Vertical layout: text top, image bottom */
+  .presentation-slide.flex-col-reverse {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+    gap: 2rem !important;
+  }
+
+  /* ============================================
+     Editor Content - NO SCROLLBARS
+     ============================================ */
+  [data-slate-editor="true"],
+  .ProseMirror {
+    height: 100% !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+  }
+
+  /* Remove ALL scrollbars during print */
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  *::-webkit-scrollbar,
+  .presentation-slide::-webkit-scrollbar,
+  [data-slate-editor="true"]::-webkit-scrollbar,
+  .ProseMirror::-webkit-scrollbar,
+  [class*="scrollbar"]::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  /* ============================================
+     Images - PRESERVE SIZE AND POSITION
+     ============================================ */
+  /* All images in slides */
+  .presentation-slide img,
+  [data-slate-editor="true"] img,
+  .ProseMirror img,
+  .presentation-image,
+  .presentation-image-container img,
+  img[class*="presentation"],
+  img[class*="root-image"],
+  [class*="root-image"] img {
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: 60vh !important;
+    object-fit: contain !important;
+    display: block !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    position: relative !important;
+    transform: none !important;
+    margin: 0 auto !important;
+    flex-shrink: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  /* Image containers - preserve layout */
+  .presentation-image-container,
+  [class*="presentation-image-container"],
+  [class*="image-container"],
+  [class*="root-image"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    position: relative !important;
+    margin: 1rem 0 !important;
+    flex-shrink: 0 !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* Image wrapper */
+  .presentation-image-wrapper,
+  [class*="presentation-image-wrapper"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    display: inline-block !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Image caption */
+  .presentation-image-caption {
+    color: #374151 !important;
+    margin-top: 0.5rem !important;
+  }
+
+  /* Root image element - special handling for layout */
+  [class*="root-image"] {
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    width: auto !important;
+    max-width: 50% !important;
+    height: auto !important;
+  }
+
+  /* When slide has row layout, root image should take space */
+  .presentation-slide.flex-row [class*="root-image"],
+  .presentation-slide.flex-row-reverse [class*="root-image"] {
+    max-width: 45% !important;
+    flex: 0 0 45% !important;
+  }
+
+  /* When slide has column layout, root image takes full width */
+  .presentation-slide.flex-col-reverse [class*="root-image"] {
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* Text content area in row layouts */
+  .presentation-slide.flex-row [data-slate-editor="true"],
+  .presentation-slide.flex-row-reverse [data-slate-editor="true"],
+  .presentation-slide.flex-row .ProseMirror,
+  .presentation-slide.flex-row-reverse .ProseMirror {
+    flex: 1 1 auto !important;
+    max-width: 50% !important;
+    overflow: hidden !important;
+  }
+
+  /* ============================================
+     Tables and Lists
+     ============================================ */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  ul,
+  ol {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  li {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* ============================================
+     DnD Contexts - Don't Interfere
+     ============================================ */
+  [class*="DndContext"],
+  [class*="SortableContext"],
+  [class*="DndProvider"] {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    position: static !important;
+  }
+
+  /* ============================================
+     Hide Preview Renderers
+     ============================================ */
+  [class*="SlidePreviewRenderer"],
+  [id^="preview-"] {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  /* ============================================
+     Print View Mode (?pdf=1) - One Slide Per Page
+     ============================================ */
+  .print-view {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* Hide all UI elements in print view */
+  .print-view header,
+  .print-view .flex.h-full.items-center,
+  .print-view [class*="ImageUploadNotification"],
+  .print-view [class*="SlidePreviewRenderer"],
+  .print-view [id^="preview-"],
+  .print-view button,
+  .print-view nav,
+  .print-view aside,
+  /* Hide PresentModeHeader - the black background header */
+  .print-view [class*="PresentModeHeader"],
+  .print-view [class*="present-mode-header"],
+  .print-view [class*="z-[1000]"],
+  .print-view [class*="bg-black/80"] {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+  }
+
+  /* Slides container - full width, show all */
+  .print-view .presentation-slides {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    display: block !important;
+  }
+
+  /* Each slide wrapper = dynamic height based on content */
+  .print-view .slide-wrapper {
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    break-after: page !important;
+    page-break-before: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    display: block !important;
+    position: relative !important;
+    overflow: visible !important;
+  }
+
+  /* Last slide - no page break after */
+  .print-view .slide-wrapper:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  /* Slide container - dynamic height based on content, maintain original alignment */
+  .print-view .slide-container,
+  .print-view [class*="slide-container"] {
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    display: flex !important;
+    align-items: center !important; /* Keep center alignment to match browser view */
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Card container - dynamic height */
+  .print-view [class*="card-container"],
+  .print-view [class*="group/card-container"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    padding-bottom: 0 !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Remove any padding-bottom from slide wrapper containers */
+  .print-view .slide-wrapper > div {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Presentation slide - dynamic height based on content, no page breaks inside */
+  .print-view .presentation-slide,
+  .print-view [data-slide-content="true"] {
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-before: auto !important;
+    page-break-after: avoid !important;
+    break-before: auto !important;
+    break-after: avoid !important;
+    margin: 0 !important;
+    padding: 2rem !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    background-color: white !important;
+    display: flex !important;
+    flex-direction: column !important;
+    /* Ensure all content stays together */
+    position: relative !important;
+  }
+
+  /* Prevent page breaks inside slide content */
+  .print-view .presentation-slide *,
+  .print-view [data-slide-content="true"] * {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Ensure DnD contexts don't interfere */
+  .print-view [class*="DndContext"],
+  .print-view [class*="SortableContext"],
+  .print-view [class*="DndProvider"] {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    position: static !important;
+  }
+
+  /* Print view styles also apply in print mode - ensure proper page breaks */
+  /* The styles above already handle @media print, so we just ensure they work */
+}
+
+/* PDF Mode Styles - Hide UI elements when ?pdf=1 is in URL */
+.pdf-mode header,
+.pdf-mode .sidebar,
+.pdf-mode [class*="ImageUploadNotification"],
+.pdf-mode [class*="SlidePreviewRenderer"],
+.pdf-mode [id^="preview-"],
+.pdf-mode button:not([data-keep-in-pdf]),
+.pdf-mode nav,
+.pdf-mode aside,
+.pdf-mode [class*="Resizable"],
+.pdf-mode [class*="resizable"],
+/* Hide PresentModeHeader - the black background header */
+.pdf-mode [class*="PresentModeHeader"],
+.pdf-mode [class*="z-[1000]"],
+.pdf-mode [class*="bg-black/80"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}

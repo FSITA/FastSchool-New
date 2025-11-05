@@ -9,7 +9,17 @@ import {
 } from "@tanstack/react-query";
 
 function makeQueryClient() {
-  return new QueryClient();
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        // Disable automatic refetching on window focus to prevent unnecessary API calls
+        refetchOnWindowFocus: false,
+        refetchOnMount: true, // Re-enable refetch on mount for proper data synchronization
+        // Keep other default behaviors
+        staleTime: 60 * 1000, // Consider data fresh for 1 minute
+      },
+    },
+  });
 }
 
 let browserQueryClient: QueryClient | undefined = undefined;

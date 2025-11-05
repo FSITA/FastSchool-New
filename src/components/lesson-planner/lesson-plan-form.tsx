@@ -43,7 +43,7 @@ export function LessonPlanForm({ onSubmit, isLoading }: LessonPlanFormProps) {
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-2xl">
-          <BookOpen className="h-6 w-6 text-orange-600" />
+          <BookOpen className="h-6 w-6 text-blue-600" />
           Create Lesson Plan
         </CardTitle>
       </CardHeader>
@@ -94,7 +94,7 @@ export function LessonPlanForm({ onSubmit, isLoading }: LessonPlanFormProps) {
 
           <Button 
             type="submit" 
-            className="w-full bg-orange-600 hover:bg-orange-700"
+            className="w-full bg-blue-600 hover:bg-blue-700"
             disabled={isLoading}
           >
             {isLoading ? (

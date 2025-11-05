@@ -15,7 +15,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { useDebouncedSave } from "@/hooks/presentation/useDebouncedSave";
 import { useEditorRef } from "@udecode/plate-core/react";
 import { generateImageAction } from "@/app/_actions/image/generate";
 import { type PlateSlide } from "../../utils/parser";
@@ -32,8 +31,7 @@ export default function RootImage({
   layoutType?: string;
   shouldGenerate?: boolean;
 }) {
-  const { setSlides, imageModel } = usePresentationState();
-  const { saveImmediately } = useDebouncedSave();
+  const { imageModel } = usePresentationState();
   const id = useId();
   const [imageUrl, setImageUrl] = useState<string | undefined>(image.url);
   const [isGenerating, setIsGenerating] = useState(!image.url);
@@ -58,14 +56,17 @@ export default function RootImage({
   // Generate image with the given prompt
   const generateImage = async (prompt: string) => {
     if (!shouldGenerate) {
+      console.log("[DIAGNOSTIC] root-image generateImage: Skipping because shouldGenerate is false");
       return;
     }
+    console.log("[DIAGNOSTIC] root-image generateImage: Starting for slide:", slideIndex, "prompt:", prompt);
     setIsGenerating(true);
     setError(undefined);
     try {
       const result = await generateImageAction(prompt);
       if (result.image?.url) {
         const newImageUrl = result.image.url;
+        console.log("[DIAGNOSTIC] root-image generateImage: Image generated successfully for slide:", slideIndex, "URL:", newImageUrl);
         setImageUrl(newImageUrl);
 
         // Get current slides state
@@ -74,6 +75,7 @@ export default function RootImage({
         // Create updated slides array
         const updatedSlides = slides.map((slide: PlateSlide, index: number) => {
           if (index === slideIndex) {
+            console.log("[DIAGNOSTIC] root-image generateImage: Updating slide", slideIndex, "with new rootImage URL");
             return {
               ...slide,
               rootImage: {
@@ -88,17 +90,17 @@ export default function RootImage({
         // Update slides with new array - use a timeout to ensure state update happens
         // This will trigger a re-render of both the editor and preview
         setTimeout(() => {
-          setSlides(updatedSlides);
-
-          // Force an immediate save to ensure the image URL is persisted
-          void saveImmediately();
+          console.log("[DIAGNOSTIC] root-image generateImage: Updating slides state with new image for slide:", slideIndex);
+          usePresentationState.getState().setSlides(updatedSlides);
         }, 100);
 
         // Ensure the generating state is properly reset
         setIsGenerating(false);
+      } else {
+        console.log("[DIAGNOSTIC] root-image generateImage: No image URL in result");
       }
     } catch (error) {
-      console.error("Error generating image:", error);
+      console.error("[DIAGNOSTIC] root-image generateImage: Error generating image:", error);
       setError("Failed to generate image. Please try again.");
       setIsGenerating(false);
     } finally {
@@ -106,25 +108,51 @@ export default function RootImage({
     }
   };
 
+  // Sync imageUrl state when image.url prop changes
+  useEffect(() => {
+    console.log("[DIAGNOSTIC] root-image: Image URL prop changed", {
+      slideIndex,
+      oldUrl: imageUrl,
+      newUrl: image.url,
+      query: image.query,
+      hasHandled: hasHandledGenerationRef.current,
+    });
+    setImageUrl(image.url);
+  }, [image.url]);
+
   // Generate image if query is provided but no URL exists
   useEffect(() => {
+    console.log("[DIAGNOSTIC] root-image: Checking image generation", {
+      slideIndex,
+      hasHandled: hasHandledGenerationRef.current,
+      hasQuery: !!image.query,
+      hasUrl: !!image.url,
+      query: image.query,
+      url: image.url,
+    });
+    
     // Skip if we've already handled this element or if there's no query or if URL already exists
     if (
       hasHandledGenerationRef.current ||
       !image.query ||
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-      image.url ||
-      imageUrl
+      image.url
     ) {
+      console.log("[DIAGNOSTIC] root-image: Skipping generation", {
+        slideIndex,
+        reason: !image.query ? "no query" : image.url ? "has URL" : "already handled",
+      });
       return;
     }
 
     // Mark as handled immediately to prevent duplicate requests
     hasHandledGenerationRef.current = true;
+    
+    console.log("[DIAGNOSTIC] root-image: Starting image generation for slide:", slideIndex, "query:", image.query);
 
     // Use the generateImage function we defined above
     void generateImage(image.query);
-  }, [image.query, image.url, imageUrl, slideIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image.query, image.url, slideIndex]);
 
   // Handle successful drops
   const onDragEnd = (item: DragItemNode, monitor: DragSourceMonitor) => {

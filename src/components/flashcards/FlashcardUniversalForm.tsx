@@ -1,10 +1,10 @@
 import { useState } from "react";
-import TabComponent from "@/components/quiz/shared/TabComponent";
-import FileNote from "@/components/quiz/pages/FileNote";
-import TextNote from "@/components/quiz/pages/TextNote";
-import FormField from "@/components/quiz/pages/FormField";
-import YoutubeLink from "@/components/quiz/pages/YoutubeLink";
-import WikipediaLink from "@/components/quiz/pages/WikipediaLink";
+import TabComponent from "@/components/shared/TabComponent";
+import FileNote from "@/components/shared/FileNote";
+import TextNote from "@/components/shared/TextNote";
+import FormField from "@/components/shared/FormField";
+import YoutubeLink from "@/components/shared/YoutubeLink";
+import WikipediaLink from "@/components/shared/WikipediaLink";
 
 export default function FlashcardUniversalForm({
   onSubmit,
@@ -17,12 +17,6 @@ export default function FlashcardUniversalForm({
     <FormField>
       <form onSubmit={onSubmit}>
         <input type="hidden" name="step" value={step} />
-        <header className="text-center mb-10">
-          <h2 className="text-lg font-semibold mb-1">Aggiungi Contenuto</h2>
-          <p className="text-xs text-zinc-400">
-            Scegli la fonte del contenuto per le flashcard
-          </p>
-        </header>
         <div className="flex flex-col gap-3 mb-4">
           <TabComponent step={step} onSetStep={setStep}>
             {step === 0 && <TextNote />}
@@ -73,7 +67,7 @@ export default function FlashcardUniversalForm({
           </label>
         </fieldset>
 
-        <button className="flex items-center justify-center w-full text-center max-w-lg mx-auto duration-200 text-sm gap-x-2 bg-primary hover:bg-secondary text-white font-medium px-4 py-3 rounded-full">
+        <button className="flex items-center justify-center w-full text-center max-w-lg mx-auto duration-200 text-sm gap-x-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3 rounded-full">
           Avanti
         </button>
       </form>

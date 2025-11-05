@@ -1,10 +1,12 @@
-import FormField from "@/components/quiz/pages/FormField";
+import FormField from "@/components/shared/FormField";
 import { usePresentationState } from "@/states/presentation-state";
 
 export default function PresentationSettingsForm({
   onSubmit,
+  isExtracting,
 }: {
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  isExtracting?: boolean;
 }) {
   const { numSlides, setNumSlides, pageStyle, setPageStyle } = usePresentationState();
 
@@ -12,16 +14,16 @@ export default function PresentationSettingsForm({
     <FormField>
       <form onSubmit={onSubmit}>
         <header className="text-center mb-10">
-          <h2 className="text-lg font-semibold mb-1">Presentation Settings</h2>
+          <h2 className="text-lg font-semibold mb-1">Impostazioni Presentazione</h2>
           <p className="text-xs text-zinc-400">
-            Configure the settings for your presentation.
+            Configura le impostazioni per la tua presentazione.
           </p>
         </header>
 
         <fieldset className="grid md:grid-cols-2 grid-cols-1 gap-x-10 gap-8 mb-10">
           <label htmlFor="numSlides">
             <p className="text-sm mb-2 text-zinc-500">
-              Number of slides
+              Numero di diapositive
             </p>
 
             <select
@@ -31,9 +33,9 @@ export default function PresentationSettingsForm({
               value={numSlides}
               onChange={(e) => setNumSlides(Number(e.target.value))}
             >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 25, 30].map((num) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20].map((num) => (
                 <option key={num} value={num}>
-                  {num} slides
+                  {num} diapositive
                 </option>
               ))}
             </select>
@@ -41,7 +43,7 @@ export default function PresentationSettingsForm({
 
           <label htmlFor="pageStyle">
             <p className="text-sm mb-2 text-zinc-500">
-              Presentation Style
+              Stile Presentazione
             </p>
 
             <select
@@ -51,17 +53,25 @@ export default function PresentationSettingsForm({
               value={pageStyle}
               onChange={(e) => setPageStyle(e.target.value)}
             >
-              <option value="professional">Professional</option>
-              <option value="creative">Creative</option>
-              <option value="academic">Academic</option>
-              <option value="casual">Casual</option>
-              <option value="minimalist">Minimalist</option>
+              <option value="professional">Professionale</option>
+              <option value="creative">Creativo</option>
+              <option value="academic">Accademico</option>
+              <option value="casual">Casuale</option>
+              <option value="minimalist">Minimalista</option>
             </select>
           </label>
         </fieldset>
 
-        <button className="flex items-center justify-center w-full text-center max-w-lg mx-auto duration-200 text-sm gap-x-2 bg-primary hover:bg-secondary text-white font-medium px-4 py-3 rounded-full">
-          Generate Presentation
+        <button 
+          type="submit"
+          disabled={isExtracting}
+          className={`flex items-center justify-center w-full text-center max-w-lg mx-auto duration-200 text-sm gap-x-2 font-medium px-4 py-3 rounded-full ${
+            isExtracting
+              ? 'bg-gray-400 cursor-not-allowed text-white'
+              : 'bg-primary hover:bg-secondary text-white'
+          }`}
+        >
+          Genera Presentazione
         </button>
       </form>
     </FormField>

@@ -1,13 +1,15 @@
-import FormField from "@/components/quiz/pages/FormField";
+import FormField from "@/components/shared/FormField";
 
 export default function FlashcardSettingsForm({
   onSubmit,
   count,
   setCount,
+  isExtracting,
 }: {
   onSubmit: () => void;
   count: number;
   setCount: (count: number) => void;
+  isExtracting?: boolean;
 }) {
 
   return (
@@ -33,7 +35,7 @@ export default function FlashcardSettingsForm({
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
             >
-              {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((num) => (
+              {[5, 10, 15, 20, 25, 30].map((num) => (
                 <option key={num} value={num}>
                   {num}
                 </option>
@@ -51,7 +53,12 @@ export default function FlashcardSettingsForm({
             console.log("📊 Current count:", count);
             onSubmit();
           }}
-          className="flex items-center justify-center w-full text-center max-w-lg mx-auto duration-200 text-sm gap-x-2 bg-primary hover:bg-secondary text-white font-medium px-4 py-3 rounded-full"
+          disabled={isExtracting}
+          className={`flex items-center justify-center w-full text-center max-w-lg mx-auto duration-200 text-sm gap-x-2 font-medium px-4 py-3 rounded-full ${
+            isExtracting
+              ? 'bg-gray-400 cursor-not-allowed text-white'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
         >
           Genera Flashcard
         </button>

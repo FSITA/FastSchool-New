@@ -84,6 +84,9 @@ export function SlideContainer({
     setSlides(updatedSlides);
   };
 
+  // Check if we're in PDF export mode
+  const isPdfMode = typeof window !== "undefined" && window.location.search.includes("pdf=1");
+
   return (
     <div
       ref={setNodeRef}
@@ -96,10 +99,12 @@ export function SlideContainer({
       )}
       {...attributes}
     >
-      <PresentModeHeader
-        presentationTitle={currentPresentationTitle}
-        showHeader={isPresenting && shouldShowExitHeader}
-      />
+      {!isPdfMode && (
+        <PresentModeHeader
+          presentationTitle={currentPresentationTitle}
+          showHeader={isPresenting && shouldShowExitHeader}
+        />
+      )}
       <div
         className={cn(
           "relative w-full",

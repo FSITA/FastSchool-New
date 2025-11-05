@@ -91,27 +91,48 @@ export const PresentationImageElement = withHOC(
         }
       };
 
+      // Sync imageUrl state when props.element.url changes
+      useEffect(() => {
+        console.log("[DIAGNOSTIC] presentation-image-element: Image URL changed", {
+          oldUrl: imageUrl,
+          newUrl: props.element.url,
+          query: props.element.query,
+          hasHandled: hasHandledGenerationRef.current,
+        });
+        setImageUrl(props.element.url);
+      }, [props.element.url]);
+
       // Generate image if query is provided but no URL exists
       useEffect(() => {
+        console.log("[DIAGNOSTIC] presentation-image-element: Checking image generation", {
+          hasHandled: hasHandledGenerationRef.current,
+          hasQuery: !!props.element.query,
+          hasUrl: !!props.element.url,
+          query: props.element.query,
+          url: props.element.url,
+        });
+        
         // Skip if in read-only mode, we've already handled this element, or if there's no query or if URL already exists
         if (
           hasHandledGenerationRef.current ||
           !props.element.query ||
-          props.element.url ||
-          imageUrl
+          props.element.url
         ) {
+          console.log("[DIAGNOSTIC] presentation-image-element: Skipping generation", {
+            reason: !props.element.query ? "no query" : props.element.url ? "has URL" : "already handled",
+          });
           return;
         }
 
         // Use the same generateImage function we defined above
         if (props.element.query) {
+          console.log("[DIAGNOSTIC] presentation-image-element: Starting image generation for query:", props.element.query);
           void generateImage(props.element.query);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [
         props.element.query,
         props.element.url,
-        imageUrl,
-        props.element.setNodeValue,
       ]);
 
       return (

@@ -9,17 +9,15 @@ import { usePathname } from "next/navigation";
 import { ThemeSelector } from "../theme/ThemeSelector";
 import { ShareButton } from "./buttons/ShareButton";
 import { PresentButton } from "./buttons/PresentButton";
+import { DownloadPdfButton } from "./buttons/DownloadPdfButton";
 import { SaveStatus } from "./buttons/SaveStatus";
 import { Brain } from "@/components/ui/icons";
 
-interface PresentationHeaderProps {
-  title?: string;
-}
-
-export default function PresentationHeader({ title }: PresentationHeaderProps) {
+export default function PresentationHeader() {
   const { currentPresentationTitle, isPresenting } = usePresentationState();
-  const [presentationTitle, setPresentationTitle] =
-    useState<string>("Presentation");
+  const [presentationTitle, setPresentationTitle] = useState<string>(
+    currentPresentationTitle ?? "Presentazione FastSchool senza titolo"
+  );
   const pathname = usePathname();
 
   // Check if we're on the generate/outline page
@@ -27,12 +25,11 @@ export default function PresentationHeader({ title }: PresentationHeaderProps) {
 
   // Update title when it changes in the state
   useEffect(() => {
+    console.log("PresentationHeader - currentPresentationTitle:", currentPresentationTitle); // Added log
     if (currentPresentationTitle) {
       setPresentationTitle(currentPresentationTitle);
-    } else if (title) {
-      setPresentationTitle(title);
     }
-  }, [currentPresentationTitle, title]);
+  }, [currentPresentationTitle]);
 
   return (
     <header className="flex h-12 w-full items-center justify-between border-b border-accent bg-background px-4">
@@ -55,6 +52,9 @@ export default function PresentationHeader({ title }: PresentationHeaderProps) {
 
         {/* Share button - Only in presentation page, not outline */}
         {isPresentationPage && !isPresenting && <ShareButton />}
+
+        {/* Download PDF button - Only in presentation page, not outline */}
+        {isPresentationPage && !isPresenting && <DownloadPdfButton />}
 
         {/* Present button - Only in presentation page, not outline */}
         {isPresentationPage && <PresentButton />}
