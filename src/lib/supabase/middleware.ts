@@ -43,13 +43,19 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Skip auth redirects for auth-related paths and API routes
+  // Skip auth redirects for auth-related paths, API routes, and public routes
   const isAuthPath = request.nextUrl.pathname.startsWith('/auth')
   const isApiPath = request.nextUrl.pathname.startsWith('/api')
   const isRootPath = request.nextUrl.pathname === '/'
   
-  // Allow all auth paths, API paths, and root path without redirect
-  if (isAuthPath || isApiPath || isRootPath) {
+  // Public routes that don't require authentication
+  const publicRoutes = ['/pricing', '/contact', '/faq', '/faqs']
+  const isPublicRoute = publicRoutes.some(route => 
+    request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/')
+  )
+  
+  // Allow all auth paths, API paths, root path, and public routes without redirect
+  if (isAuthPath || isApiPath || isRootPath || isPublicRoute) {
     return supabaseResponse
   }
 

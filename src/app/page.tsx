@@ -378,7 +378,7 @@ export default function Home() {
                 controls={false}
               >
                 <source 
-                  src={encodeURI("/homepage data/homepage-video.mp4")} 
+                  src="/homepage%20data/homepage-video.mp4" 
                   type="video/mp4" 
                 />
                 Your browser does not support the video tag.
