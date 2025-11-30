@@ -23,6 +23,7 @@ const PUBLIC_ROUTES = [
   '/contact',
   '/faq',
   '/faqs', // Keep for backward compatibility
+  '/tempdash', // Temporary dashboard page
   '/api',
 ]
 

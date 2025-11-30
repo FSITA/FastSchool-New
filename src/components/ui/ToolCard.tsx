@@ -41,7 +41,7 @@ export function ToolCard({
         transition-card
         will-change-transform group
         overflow-hidden
-        ${featured ? 'aspect-square' : wide ? 'h-[180px]' : 'p-5'}
+        ${featured ? '' : wide ? 'h-[180px]' : 'p-5'}
         ${isDisabled 
           ? 'opacity-40 cursor-not-allowed pointer-events-none' 
           : 'cursor-pointer hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0px_8px_30px_rgba(0,0,0,0.08)] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#0E85F2] focus-within:ring-offset-2'
@@ -71,22 +71,22 @@ export function ToolCard({
 
       {/* Featured Card with Banner Image */}
       {featured && banner && (
-        <div className="flex flex-col h-full gap-5 p-6">
-          <div className="flex flex-1 items-center justify-center min-h-0">
+        <div className="flex flex-col h-full gap-4 p-5 md:p-6">
+          <div className="relative w-full h-40 md:h-[160px] overflow-hidden rounded-t-[18px] bg-gray-50">
             <Image
               src={banner}
               alt={`Banner ${title}`}
-              width={400}
-              height={400}
-              className="w-full h-full object-contain"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <h3 className="text-lg font-bold text-[#1A1A1A]">
+          <div className="flex flex-col gap-1 px-1">
+            <h3 className="text-base md:text-lg font-bold text-[#1A1A1A]">
               {title}
             </h3>
             {subtitle && (
-              <p className="text-sm text-[#5A5A5A] leading-relaxed">
+              <p className="text-xs md:text-sm text-[#5A5A5A] leading-relaxed">
                 {subtitle}
               </p>
             )}

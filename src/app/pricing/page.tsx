@@ -31,32 +31,88 @@ export default function PricingPage() {
   }, [])
 
   const handleSubscribe = async (plan: 'monthly' | 'yearly') => {
+    console.log('[PRICING] ========== SUBSCRIBE BUTTON CLICKED ==========');
+    console.log('[PRICING] Plan:', plan);
+    console.log('[PRICING] User:', user ? { id: user.id, email: user.email } : 'NOT LOGGED IN');
+    
     if (!user) {
+      console.log('[PRICING] User not logged in, redirecting to login...');
       router.push('/auth/login?redirect=/pricing')
       return
     }
 
     setLoading(plan)
     try {
+      console.log('[PRICING] Making API request to create checkout session...');
+      console.log('[PRICING] Request details:', {
+        url: '/api/stripe/create-checkout-session',
+        method: 'POST',
+        plan,
+        userId: user.id,
+      });
+
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan }),
       })
 
+      console.log('[PRICING] Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+      });
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create checkout session')
+        let errorData;
+        try {
+          errorData = await response.json();
+          console.error('[PRICING] ❌ Error response from API:', errorData);
+        } catch (parseError) {
+          const text = await response.text();
+          console.error('[PRICING] ❌ Failed to parse error response. Raw text:', text);
+          errorData = { error: 'Failed to create checkout session', details: text };
+        }
+        
+        const errorMessage = errorData?.error || 'Failed to create checkout session';
+        const errorDetails = errorData?.details || errorData?.code || '';
+        const fullError = errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage;
+        
+        console.error('[PRICING] ❌❌❌ CHECKOUT FAILED ❌❌❌');
+        console.error('[PRICING] Error message:', errorMessage);
+        console.error('[PRICING] Error details:', errorDetails);
+        console.error('[PRICING] Full error data:', errorData);
+        
+        throw new Error(fullError);
       }
 
-      const { url } = await response.json()
+      const data = await response.json();
+      console.log('[PRICING] ✅ Success response:', {
+        hasSessionId: !!data.sessionId,
+        hasUrl: !!data.url,
+        sessionId: data.sessionId,
+        url: data.url ? data.url.substring(0, 50) + '...' : 'MISSING',
+      });
+
+      const { url } = data;
 
       if (url) {
+        console.log('[PRICING] ✅ Redirecting to Stripe checkout...');
         window.location.href = url
+      } else {
+        console.error('[PRICING] ❌ No URL in response');
+        throw new Error('No checkout URL received from server');
       }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Impossibile avviare il checkout. Riprova.')
+    } catch (error: any) {
+      console.error('[PRICING] ❌❌❌ ERROR IN HANDLE SUBSCRIBE ❌❌❌');
+      console.error('[PRICING] Error type:', typeof error);
+      console.error('[PRICING] Error name:', error?.name);
+      console.error('[PRICING] Error message:', error?.message);
+      console.error('[PRICING] Error stack:', error?.stack);
+      console.error('[PRICING] Full error:', error);
+      
+      const errorMessage = error?.message || 'Impossibile avviare il checkout. Riprova.';
+      alert(errorMessage);
       setLoading(null)
     }
   }
