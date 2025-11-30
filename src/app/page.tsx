@@ -215,6 +215,7 @@ export default function Home() {
   const router = useRouter();
   const [wordIndex, setWordIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
+  const [openToolsDropdown, setOpenToolsDropdown] = useState(false);
 
   // Check if user is logged in
   useEffect(() => {
@@ -273,7 +274,6 @@ export default function Home() {
   if (user) {
     const featuredTools = dashboardTools.filter(tool => tool.featured);
     const allTools = dashboardTools.filter(tool => !tool.featured);
-    const [openToolsDropdown, setOpenToolsDropdown] = useState(false);
 
   return (
       <div className="min-h-screen bg-white">
