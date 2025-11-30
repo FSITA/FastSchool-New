@@ -49,7 +49,7 @@ export function UserMenu() {
   if (!user) {
     return (
       <Button variant="outline" onClick={() => router.push('/auth/login')}>
-        Sign In
+        Accedi
       </Button>
     )
   }
@@ -85,12 +85,12 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleChangePassword}>
           <Key className="mr-2 h-4 w-4" />
-          <span>Change Password</span>
+          <span>Cambia Password</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} disabled={loading}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Sign out</span>
+          <span>Esci</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

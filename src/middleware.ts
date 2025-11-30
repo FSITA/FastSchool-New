@@ -21,7 +21,8 @@ const PUBLIC_ROUTES = [
   '/auth',
   '/pricing',
   '/contact',
-  '/faqs',
+  '/faq',
+  '/faqs', // Keep for backward compatibility
   '/api',
 ]
 

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ToolCard } from '@/components/ui/ToolCard';
+import { UserMenu } from '@/components/user/UserMenu';
 import Header from '../components/shared/Header';
 import FAQSection from '../components/shared/FAQSection';
 import CTASection from '../components/shared/CTASection';
@@ -64,6 +65,7 @@ const dashboardTools = [
     icon: '/icons/quiz.png',
     banner: '/banners/quiz.png',
     featured: true,
+    starred: true,
   },
   {
     name: 'Lezioni IA',
@@ -72,6 +74,7 @@ const dashboardTools = [
     icon: '/icons/lesson.png',
     banner: '/banners/lesson.png',
     featured: true,
+    starred: true,
   },
   {
     name: 'Presentazioni IA Beta',
@@ -80,6 +83,7 @@ const dashboardTools = [
     icon: '/icons/presentation.png',
     banner: '/banners/presentation.png',
     featured: true,
+    starred: true,
   },
   {
     name: 'Generatore di Flashcard',
@@ -90,6 +94,25 @@ const dashboardTools = [
     name: 'Pianificatore di Lezioni AI',
     href: '/lesson-planner',
     icon: '/icons/planner.png',
+    starred: true,
+  },
+  {
+    name: 'Generatore di Lezioni',
+    href: '/lesson-generator',
+    icon: '/icons/lesson.png',
+    starred: true,
+  },
+  {
+    name: 'Generatore di Presentazioni',
+    href: '/presentation',
+    icon: '/icons/presentation.png',
+    starred: true,
+  },
+  {
+    name: 'Generatore di Quiz',
+    href: '/quiz-generator',
+    icon: '/icons/quiz.png',
+    starred: true,
   },
   {
     name: 'Generatore di Diagrammi',
@@ -100,6 +123,41 @@ const dashboardTools = [
     name: 'Generatore di Riassunti',
     href: '/summary-generator',
     icon: '/icons/summary.png',
+  },
+  {
+    name: 'METODOLOGIE SPECIALI',
+    href: '/lesson-planner',
+    icon: '/icons/special.png',
+  },
+  {
+    name: 'Generatore di Outline',
+    href: '/summary-generator',
+    icon: '/icons/outline.png',
+  },
+  {
+    name: 'Generatore di Grafici',
+    icon: '/icons/chart.png',
+    comingSoon: true,
+  },
+  {
+    name: 'Chat con PDF',
+    icon: '/icons/chat-pdf.png',
+    comingSoon: true,
+  },
+  {
+    name: 'Completa gli Spazi',
+    icon: '/icons/fill-blanks.png',
+    comingSoon: true,
+  },
+  {
+    name: 'Vero o Falso',
+    icon: '/icons/true-false.png',
+    comingSoon: true,
+  },
+  {
+    name: 'Generatore di Schede di Lavoro',
+    icon: '/icons/worksheet.png',
+    comingSoon: true,
   },
 ];
 
@@ -166,12 +224,12 @@ export default function Home() {
   // If user is logged in, show dashboard view
   if (user) {
     const featuredTools = dashboardTools.filter(tool => tool.featured);
-    const allTools = dashboardTools;
+    const allTools = dashboardTools.filter(tool => !tool.featured);
 
   return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
         {/* Header */}
-        <header className="border-b border-gray-200 bg-white">
+        <header className="border-b border-gray-200 bg-white/80 backdrop-blur">
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center gap-3">
@@ -188,18 +246,9 @@ export default function Home() {
                   href="/pricing"
                   className="text-sm font-semibold text-gray-700 hover:text-blue-600 transition"
                 >
-                  Pricing
+                  Prezzi
                 </Link>
-                <button
-                  onClick={async () => {
-                    const supabase = createClient();
-                    await supabase.auth.signOut();
-                    router.push('/');
-                  }}
-                  className="text-sm font-semibold text-gray-700 hover:text-blue-600 transition"
-                >
-                  Logout
-                </button>
+            <UserMenu />
               </div>
             </div>
           </div>
@@ -228,9 +277,22 @@ export default function Home() {
                 banner={tool.banner}
                 href={tool.href}
                 featured={tool.featured}
+                starred={tool.starred}
               />
             ))}
           </div>
+        </section>
+          
+        {/* Help Banner */}
+        <section className="max-w-7xl mx-auto px-6 pb-12">
+            <ToolCard
+              title="Non sei sicuro? Cosa fare?"
+              subtitle="Se non sai e hai bisogno del nostro aiuto, clicca per guardare un video che mostra cosa puoi fare con la nostra IA"
+              banner="/banners/help.png"
+              wide={true}
+            href="#"
+            disabled={true}
+            />
         </section>
 
         {/* All Tools Section */}
@@ -245,6 +307,8 @@ export default function Home() {
                 icon={tool.icon}
                 banner={tool.banner}
                 href={tool.href}
+                starred={tool.starred}
+                comingSoon={tool.comingSoon}
               />
             ))}
           </div>
@@ -310,8 +374,15 @@ export default function Home() {
                 loop
                 muted
                 playsInline
-                src="/homepage%20data/homepage%202nd%20section%20video.mp4"
-              />
+                preload="auto"
+                controls={false}
+              >
+                <source 
+                  src={encodeURI("/homepage data/homepage-video.mp4")} 
+                  type="video/mp4" 
+                />
+                Your browser does not support the video tag.
+              </video>
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-[0_25px_60px_rgba(0,0,0,0.15)]">
                   <span className="text-3xl font-semibold text-[#FF6A21]">g</span>
