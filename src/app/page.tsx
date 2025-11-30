@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ToolCard } from '@/components/ui/ToolCard';
 import { UserMenu } from '@/components/user/UserMenu';
+import { TrialStatusBanner } from '@/components/shared/TrialStatusBanner';
 import Header from '../components/shared/Header';
 import FAQSection from '../components/shared/FAQSection';
 import CTASection from '../components/shared/CTASection';
@@ -277,6 +278,9 @@ export default function Home() {
 
   return (
       <div className="min-h-screen bg-white">
+        {/* Trial Status Banner */}
+        <TrialStatusBanner />
+        
         {/* Header */}
         <header className="border-b border-gray-200 bg-white">
           <div className="max-w-6xl mx-auto px-6 py-4">

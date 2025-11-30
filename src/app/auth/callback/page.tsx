@@ -121,15 +121,24 @@ export default function AuthCallbackPage() {
             // Initialize trial for new users
             if (data.session.user) {
               try {
-                await fetch('/api/subscription/initialize-trial', {
+                console.log('[AuthCallback] Initializing trial for user:', data.session.user.id);
+                const trialResponse = await fetch('/api/subscription/initialize-trial', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({ userId: data.session.user.id }),
-                })
+                });
+                
+                if (!trialResponse.ok) {
+                  const errorData = await trialResponse.json();
+                  console.error('[AuthCallback] ❌ Failed to initialize trial:', errorData);
+                } else {
+                  const trialData = await trialResponse.json();
+                  console.log('[AuthCallback] ✅ Trial initialized successfully:', trialData);
+                }
               } catch (error) {
-                console.error('Error initializing trial:', error)
+                console.error('[AuthCallback] ❌ Error initializing trial:', error);
               }
             }
             
@@ -165,15 +174,24 @@ export default function AuthCallbackPage() {
               // Initialize trial for new users (only on SIGNED_IN, not INITIAL_SESSION)
               if (event === 'SIGNED_IN' && session.user) {
                 try {
-                  await fetch('/api/subscription/initialize-trial', {
+                  console.log('[AuthCallback] Initializing trial for user (SIGNED_IN event):', session.user.id);
+                  const trialResponse = await fetch('/api/subscription/initialize-trial', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ userId: session.user.id }),
-                  })
+                  });
+                  
+                  if (!trialResponse.ok) {
+                    const errorData = await trialResponse.json();
+                    console.error('[AuthCallback] ❌ Failed to initialize trial:', errorData);
+                  } else {
+                    const trialData = await trialResponse.json();
+                    console.log('[AuthCallback] ✅ Trial initialized successfully:', trialData);
+                  }
                 } catch (error) {
-                  console.error('Error initializing trial:', error)
+                  console.error('[AuthCallback] ❌ Error initializing trial:', error);
                 }
               }
             }
