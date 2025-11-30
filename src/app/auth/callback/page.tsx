@@ -118,6 +118,21 @@ export default function AuthCallbackPage() {
             // Set server-readable session cookie
             await setServerSession(data.session)
             
+            // Initialize trial for new users
+            if (data.session.user) {
+              try {
+                await fetch('/api/subscription/initialize-trial', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ userId: data.session.user.id }),
+                })
+              } catch (error) {
+                console.error('Error initializing trial:', error)
+              }
+            }
+            
             // Session stored successfully, redirect to intended page
             router.replace(next)
             return
@@ -146,6 +161,21 @@ export default function AuthCallbackPage() {
             // Set server-readable session cookie
             if (session) {
               await setServerSession(session)
+              
+              // Initialize trial for new users (only on SIGNED_IN, not INITIAL_SESSION)
+              if (event === 'SIGNED_IN' && session.user) {
+                try {
+                  await fetch('/api/subscription/initialize-trial', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId: session.user.id }),
+                  })
+                } catch (error) {
+                  console.error('Error initializing trial:', error)
+                }
+              }
             }
             
             router.replace(next)

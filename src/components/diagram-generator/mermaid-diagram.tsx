@@ -249,7 +249,7 @@ export function MermaidDiagram({ code, onError }: MermaidDiagramProps) {
                   ? 'bg-blue-100 text-blue-600' 
                   : 'bg-gray-50 hover:bg-gray-100 text-gray-600'
               }`}
-              title="Zoom Focus Tool"
+              title="Strumento messa a fuoco zoom"
             >
               <Target className="h-4 w-4" />
             </button>
@@ -257,7 +257,7 @@ export function MermaidDiagram({ code, onError }: MermaidDiagramProps) {
             {isZoomToolActive && (
               <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[140px]">
                 <div className="p-2">
-                  <div className="text-xs font-medium text-gray-500 mb-2">Zoom Focus</div>
+                  <div className="text-xs font-medium text-gray-500 mb-2">Messa a fuoco zoom</div>
                   <div className="grid grid-cols-2 gap-1">
                     <button
                       onClick={() => handleZoomModeChange('top-left')}
@@ -267,7 +267,7 @@ export function MermaidDiagram({ code, onError }: MermaidDiagramProps) {
                           : 'hover:bg-gray-100 text-gray-600'
                       }`}
                     >
-                      Top Left
+                      In alto a sinistra
                     </button>
                     <button
                       onClick={() => handleZoomModeChange('top-right')}
@@ -277,7 +277,7 @@ export function MermaidDiagram({ code, onError }: MermaidDiagramProps) {
                           : 'hover:bg-gray-100 text-gray-600'
                       }`}
                     >
-                      Top Right
+                      In alto a destra
                     </button>
                     <button
                       onClick={() => handleZoomModeChange('bottom-left')}
@@ -287,7 +287,7 @@ export function MermaidDiagram({ code, onError }: MermaidDiagramProps) {
                           : 'hover:bg-gray-100 text-gray-600'
                       }`}
                     >
-                      Bottom Left
+                      In basso a sinistra
                     </button>
                     <button
                       onClick={() => handleZoomModeChange('bottom-right')}
@@ -297,7 +297,7 @@ export function MermaidDiagram({ code, onError }: MermaidDiagramProps) {
                           : 'hover:bg-gray-100 text-gray-600'
                       }`}
                     >
-                      Bottom Right
+                      In basso a destra
                     </button>
                     <button
                       onClick={() => handleZoomModeChange('center')}
@@ -307,7 +307,7 @@ export function MermaidDiagram({ code, onError }: MermaidDiagramProps) {
                           : 'hover:bg-gray-100 text-gray-600'
                       }`}
                     >
-                      Center
+                      Centro
                     </button>
                   </div>
                 </div>
@@ -322,7 +322,7 @@ export function MermaidDiagram({ code, onError }: MermaidDiagramProps) {
           disabled={!svg || isDownloading}
         >
           <Download className={`h-4 w-4 ${isDownloading ? 'animate-bounce' : ''}`} />
-          {isDownloading ? 'Downloading...' : 'Download SVG'}
+          {isDownloading ? 'Download in corso...' : 'Scarica SVG'}
         </button>
       </div>
       <div className="relative">

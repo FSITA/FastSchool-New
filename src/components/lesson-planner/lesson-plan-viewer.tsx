@@ -12,7 +12,7 @@ import { TimelineParser } from '@/lib/lesson-planner/timeline-parser';
 import { SectionParser } from '@/lib/lesson-planner/section-parser';
 import { getLessonPlanTranslations, translateSectionTitle } from '@/lib/lesson-planner/language-translations';
 
-export function LessonPlanViewer({ lessonPlan, generatedContent, onGenerateAgain }: LessonPlanViewerProps) {
+export function LessonPlanViewer({ lessonPlan, generatedContent, generatedSections, onGenerateAgain }: LessonPlanViewerProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const translations = getLessonPlanTranslations(lessonPlan.language || 'english');
 
@@ -34,6 +34,28 @@ export function LessonPlanViewer({ lessonPlan, generatedContent, onGenerateAgain
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  };
+
+  // Helper function to filter out duration lines from LESSON OVERVIEW section
+  const filterDurationLines = (content: string): string => {
+    const lines = content.split('\n');
+    const filteredLines = lines.filter(line => {
+      const trimmed = line.trim();
+      // Filter out lines containing duration patterns (case insensitive)
+      // Matches patterns like "Durata: 50 minuti", "Duration: 50 minutes", etc.
+      const durationPatterns = [
+        /^.*[Dd]urata\s*:.*$/i,        // Italian: "Durata:"
+        /^.*[Dd]uration\s*:.*$/i,       // English: "Duration:"
+        /^.*[Dd]urata\s+.*$/i,          // Italian: "Durata" (without colon)
+        /^.*[Dd]uration\s+.*$/i,        // English: "Duration" (without colon)
+        /^.*[Dd]urata\s*:.*minuti.*$/i, // Italian: "Durata: X minuti"
+        /^.*[Dd]uration\s*:.*minutes?.*$/i, // English: "Duration: X minutes"
+      ];
+      
+      return !durationPatterns.some(pattern => pattern.test(trimmed));
+    });
+    
+    return filteredLines.join('\n');
   };
 
   // Helper function to load Google Fonts for CJK languages
@@ -147,7 +169,18 @@ export function LessonPlanViewer({ lessonPlan, generatedContent, onGenerateAgain
         printContainer.appendChild(headerDiv);
 
         // Parse and format content
-        const parsedSections = SectionParser.parseContent(generatedContent);
+        let parsedSections = SectionParser.parseContent(generatedContent);
+        
+        // Filter out duration from LESSON OVERVIEW section for PDF
+        parsedSections = parsedSections.map(section => {
+          if (section.title === 'LESSON OVERVIEW' || section.title.toUpperCase().includes('OVERVIEW')) {
+            return {
+              ...section,
+              content: filterDurationLines(section.content)
+            };
+          }
+          return section;
+        });
         
         parsedSections.forEach((section) => {
           const sectionTitle = translateSectionTitle(section.title, currentLanguage);
@@ -308,7 +341,19 @@ export function LessonPlanViewer({ lessonPlan, generatedContent, onGenerateAgain
         doc.text(`${translations.date}: ${new Date().toLocaleDateString()}`, 120, yPos);
         
         // Parse and format content using robust section parser
-        const parsedSections = SectionParser.parseContent(generatedContent);
+        let parsedSections = SectionParser.parseContent(generatedContent);
+        
+        // Filter out duration from LESSON OVERVIEW section for PDF
+        parsedSections = parsedSections.map(section => {
+          if (section.title === 'LESSON OVERVIEW' || section.title.toUpperCase().includes('OVERVIEW')) {
+            return {
+              ...section,
+              content: filterDurationLines(section.content)
+            };
+          }
+          return section;
+        });
+        
         let currentY = 50;
       
         parsedSections.forEach((section) => {
@@ -541,7 +586,21 @@ export function LessonPlanViewer({ lessonPlan, generatedContent, onGenerateAgain
     }
   };
 
-  const parsedSections = parseContent(generatedContent);
+  // Use generatedSections if provided (from streaming), otherwise parse from generatedContent
+  let parsedSections = generatedSections && generatedSections.length > 0 
+    ? generatedSections 
+    : parseContent(generatedContent);
+
+  // Filter out duration from LESSON OVERVIEW section
+  parsedSections = parsedSections.map(section => {
+    if (section.title === 'LESSON OVERVIEW' || section.title.toUpperCase().includes('OVERVIEW')) {
+      return {
+        ...section,
+        content: filterDurationLines(section.content)
+      };
+    }
+    return section;
+  });
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

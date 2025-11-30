@@ -55,7 +55,17 @@ export async function updateSession(request: NextRequest) {
 
   // Only redirect to login if user is not authenticated and trying to access protected routes
   if (!user) {
-    console.log('Middleware: No user found, redirecting to login from:', request.nextUrl.pathname)
+    // Check if bypass is enabled - if so, don't redirect
+    const bypassAuth =
+      process.env.NODE_ENV === 'development' &&
+      (process.env.BYPASS_SUPABASE_AUTH === 'true' || process.env.NEXT_PUBLIC_BYPASS_SUPABASE_AUTH === 'true')
+    
+    if (bypassAuth) {
+      console.log('[updateSession] Bypass enabled, skipping redirect for:', request.nextUrl.pathname)
+      return supabaseResponse
+    }
+    
+    console.log('[updateSession] No user found, redirecting to login from:', request.nextUrl.pathname)
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     url.searchParams.set('redirectTo', request.nextUrl.pathname)

@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
     const host = req.headers.get("host") || "localhost:3000";
     const baseUrl = `${protocol}://${host}`;
 
-    // Launch Puppeteer
-    browser = await puppeteer.launch({
+    // Launch Puppeteer with Render.com-compatible configuration
+    const puppeteerOptions: any = {
       headless: true,
       args: [
         "--no-sandbox",
@@ -28,8 +28,21 @@ export async function POST(req: NextRequest) {
         "--disable-dev-shm-usage",
         "--disable-gpu",
         "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process",
       ],
-    });
+    };
+
+    // For Render.com, ensure we use the correct Chrome path
+    // Puppeteer should find it automatically after postinstall, but we can be explicit
+    if (process.env.RENDER) {
+      // On Render.com, Chrome is installed in the cache directory
+      const chromePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      if (chromePath) {
+        puppeteerOptions.executablePath = chromePath;
+      }
+    }
+
+    browser = await puppeteer.launch(puppeteerOptions);
 
     const page = await browser.newPage();
 

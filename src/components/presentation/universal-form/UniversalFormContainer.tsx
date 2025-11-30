@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { usePresentationState } from "@/states/presentation-state";
 import UniversalForm from "./UniversalForm";
 import PresentationSettingsForm from "./PresentationSettingsForm";
@@ -29,20 +29,35 @@ export default function UniversalFormContainer() {
   const [extractedContent, setExtractedContent] = useState<ProcessedContent | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string>("");
+  const [extractionMessage, setExtractionMessage] = useState<string | undefined>(undefined);
+  const fallbackNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const FALLBACK_NOTICE_IT =
+    "Non siamo riusciti a recuperare la trascrizione dai sottotitoli. Ora stiamo generando la trascrizione direttamente dall'audio: potrebbe volerci qualche istante (un video di 5 minuti richiede circa 15 secondi).";
 
   const handleUniversalFormNext = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const step = formData.get("step") as string;
+    const activeStep = step ? parseInt(step, 10) : -1;
     const language = formData.get("language") as string;
     setUniversalFormData(formData);
     setOriginalLanguage(language);
     setExtractionError("");
     setIsExtracting(true);
+    setExtractionMessage(undefined);
+
+    if (fallbackNoticeTimeoutRef.current) {
+      clearTimeout(fallbackNoticeTimeoutRef.current);
+      fallbackNoticeTimeoutRef.current = null;
+    }
+    if (activeStep === 2) {
+      fallbackNoticeTimeoutRef.current = setTimeout(() => {
+        setExtractionMessage(FALLBACK_NOTICE_IT);
+      }, 6000);
+    }
 
     try {
       // Determine source type for loading message
-      const step = formData.get("step") as string;
-      const activeStep = step ? parseInt(step, 10) : -1;
       let sourceType: "PDF" | "YouTube" | "Wikipedia" | "Notes" | "Files" | undefined;
       
       if (activeStep === 0) sourceType = "Notes";
@@ -79,15 +94,22 @@ export default function UniversalFormContainer() {
       
       setUniversalFormData(formData); // Update with extracted content
       setIsExtracting(false);
+      setExtractionMessage(undefined);
       setFormStep(1);
       toast.success('Contenuto estratto con successo!');
     } catch (error) {
       console.error('Error extracting content:', error);
       setIsExtracting(false);
+      setExtractionMessage(undefined);
       const errorMsg = error instanceof Error ? error.message : 'Errore durante l\'estrazione del contenuto';
       setExtractionError(errorMsg);
       toast.error(errorMsg);
       // Don't move to next step if extraction fails
+    } finally {
+      if (fallbackNoticeTimeoutRef.current) {
+        clearTimeout(fallbackNoticeTimeoutRef.current);
+        fallbackNoticeTimeoutRef.current = null;
+      }
     }
   };
 
@@ -157,7 +179,10 @@ export default function UniversalFormContainer() {
 
       {/* Show extraction notification bar at top-right */}
       {isExtracting && (
-        <ContentExtractionNotificationBar sourceType={getExtractionSourceType()} />
+        <ContentExtractionNotificationBar
+          sourceType={getExtractionSourceType()}
+          message={extractionMessage}
+        />
       )}
 
       {/* Show extraction error if any */}

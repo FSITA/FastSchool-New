@@ -6,10 +6,22 @@ import { LessonPlanSection } from '@/types/lesson-planner';
 export class SectionParser {
   
   /**
-   * Parse lesson plan content into structured sections
+   * Check if a section has sufficient content to be considered complete
    */
-  static parseContent(content: string): LessonPlanSection[] {
-    console.log('🔍 Parsing lesson plan content...');
+  private static isSectionComplete(section: LessonPlanSection): boolean {
+    // A section is complete if it has at least 50 characters of content
+    // This prevents showing sections with just headers or single lines
+    const minContentLength = 50;
+    return section.content.trim().length >= minContentLength;
+  }
+
+  /**
+   * Parse lesson plan content into structured sections
+   * @param content The content to parse
+   * @param allowPartial If true, returns sections even if fewer than expected (for streaming)
+   */
+  static parseContent(content: string, allowPartial: boolean = false): LessonPlanSection[] {
+    console.log('🔍 Parsing lesson plan content...', allowPartial ? '(partial content allowed)' : '');
     
     // Clean the content first
     const cleanedContent = SectionParser.cleanContent(content);
@@ -22,16 +34,51 @@ export class SectionParser {
       this.parseWithBulletSections
     ];
     
+    let bestResult: LessonPlanSection[] = [];
+    let bestStrategyName = '';
+    
     for (const strategy of strategies) {
       const result = strategy(cleanedContent);
-      if (result.length >= 6) { // We expect at least 6 sections
+      
+      // Filter out incomplete sections during streaming
+      const completeSections = allowPartial 
+        ? result.filter(section => SectionParser.isSectionComplete(section))
+        : result;
+      
+      // During streaming, accept any complete sections found
+      if (allowPartial && completeSections.length > 0) {
+        if (completeSections.length > bestResult.length) {
+          bestResult = completeSections;
+          bestStrategyName = strategy.name;
+        }
+      } else if (result.length >= 6) { // We expect at least 6 sections for final parse
         console.log(`✅ Successfully parsed using ${strategy.name} with ${result.length} sections`);
         return result;
       }
     }
     
+    // If we found some complete sections during streaming, return them
+    if (allowPartial && bestResult.length > 0) {
+      console.log(`✅ Parsed ${bestResult.length} complete sections using ${bestStrategyName} (streaming mode)`);
+      return bestResult;
+    }
+    
+    // If no sections found or not allowing partial, try fallback
     console.log('⚠️ All parsing strategies failed, using fallback');
-    return this.createFallbackSections(cleanedContent);
+    const fallbackSections = this.createFallbackSections(cleanedContent);
+    
+    // During streaming, only return complete fallback sections
+    if (allowPartial) {
+      const completeFallbackSections = fallbackSections.filter(section => 
+        SectionParser.isSectionComplete(section)
+      );
+      if (completeFallbackSections.length > 0) {
+        return completeFallbackSections;
+      }
+      return []; // Don't return incomplete sections during streaming
+    }
+    
+    return fallbackSections;
   }
   
   /**

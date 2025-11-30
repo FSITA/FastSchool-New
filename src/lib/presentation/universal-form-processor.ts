@@ -1,9 +1,10 @@
 import { fetchTranscriptWithFallback } from "@/lib/youtube-transcript/youtube-transcript-service";
+import { randomInt } from "crypto";
 
 /**
  * YouTube transcript function - Uses 2-tier fallback system
- * Tier 1: YouTube Innertube API (extracts API key from YouTube page) - Free, reliable
- * Tier 2: youtube-transcript-io API (paid, reliable fallback) - Requires API key
+ * Tier 1: YouTube Innertube API (extracts API key from YouTube page)
+ * Tier 2: Gemini summary transcription (gemini-2.5-flash)
  * 
  * @param videoId - YouTube video ID (11 characters)
  * @param language - Language code (default: "en")
@@ -26,7 +27,7 @@ async function getYoutubeTranscript(
     throw new Error("Invalid video ID format. Video ID must be 11 characters.");
   }
 
-  // Fetch transcript using 3-tier fallback system
+  // Fetch transcript using 2-tier fallback system (Innertube → Gemini fallback)
   console.log("🔄 [getYoutubeTranscript] Calling fetchTranscriptWithFallback...");
   const result = await fetchTranscriptWithFallback(videoId, language);
 
@@ -209,50 +210,89 @@ async function processWikipediaLink(
 }
 
 /**
- * Maximum number of pages to extract from PDF (backend limit for performance)
- * This is a silent backend optimization - users should not be aware of this limit
+ * Maximum number of pages Gemini should receive from a PDF.
  */
-const MAX_PDF_PAGES = 10;
+const MAX_PDF_PAGES = 5;
+
+interface SelectedPdfPagesResult {
+  /**
+   * Zero-indexed page numbers to extract.
+   */
+  selectedPages: number[];
+  /**
+   * The original range requested after clamping to the document bounds.
+   */
+  requestedRange: { start: number; end: number };
+  /**
+   * Whether the pages were randomly sampled (true) or the full range was used (false).
+   */
+  randomized: boolean;
+}
 
 /**
- * Calculates and limits page range to max 10 pages (silent backend optimization)
- * @param startPage - Starting page (1-indexed)
- * @param endPage - Ending page (1-indexed)
- * @returns Limited page range [actualStart, actualEnd, totalRequested]
+ * Determines which PDF pages should be extracted and ensures Gemini never receives
+ * more than MAX_PDF_PAGES pages. When the candidate range is larger than the limit,
+ * a random subset of distinct pages is selected.
  */
-function limitPageRange(
+function selectPdfPages(
+  totalPages: number,
   startPage?: number,
   endPage?: number
-): { start: number; end: number; requested: number } {
-  // If no page range specified, extract first MAX_PDF_PAGES pages
-  if (!startPage || startPage < 1) {
-    return { start: 1, end: MAX_PDF_PAGES, requested: 0 };
+): SelectedPdfPagesResult {
+  if (totalPages <= 0) {
+    throw new Error("PDF has no pages to extract");
   }
 
-  // If endPage not specified, extract from startPage to startPage + MAX_PDF_PAGES - 1
-  if (!endPage || endPage < startPage) {
-    return { 
-      start: startPage, 
-      end: startPage + MAX_PDF_PAGES - 1, 
-      requested: 0 
+  const normalizedStart =
+    startPage && startPage >= 1 ? Math.min(startPage, totalPages) : 1;
+
+  const normalizedEnd =
+    endPage && endPage >= normalizedStart
+      ? Math.min(endPage, totalPages)
+      : totalPages;
+
+  const requestedPages: number[] = [];
+  for (let page = normalizedStart; page <= normalizedEnd; page++) {
+    requestedPages.push(page);
+  }
+
+  if (requestedPages.length === 0) {
+    throw new Error("The requested PDF page range is empty");
+  }
+
+  if (requestedPages.length <= MAX_PDF_PAGES) {
+    return {
+      selectedPages: requestedPages.map((page) => page - 1),
+      requestedRange: { start: normalizedStart, end: normalizedEnd },
+      randomized: false,
     };
   }
 
-  // Calculate requested page count
-  const requestedPages = endPage - startPage + 1;
-
-  // Limit to MAX_PDF_PAGES (silent backend optimization)
-  const actualEnd = Math.min(endPage, startPage + MAX_PDF_PAGES - 1);
-  const actualPages = actualEnd - startPage + 1;
-
-  if (requestedPages > MAX_PDF_PAGES) {
-    console.log(
-      `📄 PDF page range limited silently: requested ${requestedPages} pages (${startPage}-${endPage}), ` +
-      `extracting ${actualPages} pages (${startPage}-${actualEnd}) for performance`
-    );
+  const sampledPages = new Set<number>();
+  while (sampledPages.size < MAX_PDF_PAGES) {
+    const randomIndex = randomInt(requestedPages.length);
+    const pageNumber = requestedPages[randomIndex];
+    if (pageNumber === undefined) {
+      continue;
+    }
+    sampledPages.add(pageNumber);
   }
 
-  return { start: startPage, end: actualEnd, requested: requestedPages };
+  const selectedPages = Array.from(sampledPages)
+    .sort((a, b) => a - b)
+    .map((page) => page - 1);
+
+  console.log(
+    `📄 Randomly sampled PDF pages for extraction: ${Array.from(sampledPages).sort(
+      (a, b) => a - b
+    ).join(", ")} (from requested range ${normalizedStart}-${normalizedEnd})`
+  );
+
+  return {
+    selectedPages,
+    requestedRange: { start: normalizedStart, end: normalizedEnd },
+    randomized: true,
+  };
 }
 
 /**
@@ -269,34 +309,52 @@ async function processPdfFile(
   endPage?: number
 ): Promise<string> {
   try {
-    const { start, end } = limitPageRange(startPage, endPage);
-    
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    
-    // If page range is specified, use pdf-lib to extract only those pages
+
     let pdfBuffer = buffer;
-    if (startPage || endPage) {
-      try {
-        const { PDFDocument } = await import("pdf-lib");
-        const sourcePdf = await PDFDocument.load(buffer);
-        const targetPdf = await PDFDocument.create();
-        
-        // Copy only the requested pages (0-indexed in pdf-lib)
-        const pagesToCopy: number[] = [];
-        const maxPage = Math.min(end, sourcePdf.getPageCount());
-        for (let i = start - 1; i < maxPage; i++) {
-          pagesToCopy.push(i);
-        }
-        
-        if (pagesToCopy.length > 0) {
-          const copiedPages = await targetPdf.copyPages(sourcePdf, pagesToCopy);
-          copiedPages.forEach((page) => targetPdf.addPage(page));
-          pdfBuffer = Buffer.from(await targetPdf.save());
-        }
-      } catch (pdfLibError) {
-        console.log(`⚠️ Failed to limit pages with pdf-lib, extracting all pages: ${pdfLibError}`);
+    let selectedPageNumbers: number[] = [];
+    let pagesRandomized = false;
+    let requestedRange: { start: number; end: number } | null = null;
+
+    // Always limit the PDF to the sampled pages before sending to Gemini.
+    try {
+      const { PDFDocument } = await import("pdf-lib");
+      const sourcePdf = await PDFDocument.load(buffer);
+      const totalPages = sourcePdf.getPageCount();
+
+      const selection = selectPdfPages(totalPages, startPage, endPage);
+      const { selectedPages } = selection;
+      requestedRange = selection.requestedRange;
+      pagesRandomized = selection.randomized;
+
+      selectedPageNumbers = selectedPages.map((page) => page + 1);
+
+      const targetPdf = await PDFDocument.create();
+      const copiedPages = await targetPdf.copyPages(sourcePdf, selectedPages);
+      copiedPages.forEach((page) => targetPdf.addPage(page));
+      pdfBuffer = Buffer.from(await targetPdf.save());
+
+      if (pagesRandomized) {
+        console.log(
+          `🎲 Gemini will receive ${selectedPageNumbers.length} randomly sampled pages (${selectedPageNumbers.join(
+            ", "
+          )}) from requested range ${requestedRange.start}-${requestedRange.end}`
+        );
+      } else {
+        console.log(
+          `📄 Gemini will receive all ${selectedPageNumbers.length} requested pages (${selectedPageNumbers.join(
+            ", "
+          )})`
+        );
       }
+    } catch (pdfLibError) {
+      console.error(
+        `❌ Failed to prepare limited PDF pages for extraction: ${pdfLibError}`
+      );
+      throw new Error(
+        "Could not prepare PDF pages for extraction. Please try again with a different file or page range."
+      );
     }
     
     // Convert PDF to base64 and send to Gemini for text extraction
@@ -309,9 +367,17 @@ async function processPdfFile(
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     // Build prompt with page range if specified
-    let prompt = "Extract all text content from this PDF document. Return only the text content without any formatting or additional commentary.";
-    if (startPage && endPage) {
-      prompt = `Extract text content from pages ${start} to ${end} of this PDF document. Return only the text content from these pages without any formatting or additional commentary.`;
+    let prompt =
+      "Extract all text content from the provided pages of this PDF document. These pages represent a sample of the full document. Return only the text content you receive without any additional commentary.";
+    
+    if (!pagesRandomized && requestedRange) {
+      if (requestedRange.start === 1 && requestedRange.end === selectedPageNumbers.length) {
+        // Whole document (≤ MAX_PDF_PAGES)
+        prompt =
+          "Extract all text content from the provided pages of this PDF document. Return only the text content without any formatting or additional commentary.";
+      } else {
+        prompt = `Extract text content from pages ${requestedRange.start} to ${requestedRange.end} of this PDF document. Return only the text content from these pages without any formatting or additional commentary.`;
+      }
     }
     
     const result = await model.generateContent([
@@ -327,7 +393,9 @@ async function processPdfFile(
     const extractedText = result.response.text();
     console.log(
       `✅ Gemini extraction successful: ${file.name} ` +
-      (startPage && endPage ? `(pages ${start}-${end})` : "(all pages)")
+      (selectedPageNumbers.length > 0
+        ? `(pages ${selectedPageNumbers.join(", ")})`
+        : "(no page metadata)")
     );
     return extractedText;
   } catch (error) {

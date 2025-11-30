@@ -16,6 +16,10 @@ NEXT_PUBLIC_SUPABASE_URL="your_supabase_project_url"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_anon_key"
 SUPABASE_SERVICE_ROLE_KEY="your_supabase_service_role_key"
 
+# Optional: Enable auth bypass in development (for local testing only)
+# When set to "true" in development, API routes will skip Supabase auth checks
+# BYPASS_SUPABASE_AUTH="true"
+
 # Optional: Site URL for OAuth callbacks
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 ```

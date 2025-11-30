@@ -7,10 +7,9 @@ import {
 /**
  * POST /api/youtube-transcript
  * 
- * Fetches YouTube transcript using 3-tier fallback system:
- * - Tier 1: Fast timedtext endpoint (free)
- * - Tier 2: youtube-transcript-api library (free, pure JS)
- * - Tier 3: youtube-transcript-io API (paid, reliable fallback)
+ * Fetches YouTube transcript using 2-tier fallback system:
+ * - Tier 1: YouTube Innertube API (captions)
+ * - Tier 2: Gemini summary transcription fallback
  * 
  * Request body:
  * {
@@ -22,7 +21,7 @@ import {
  * Response (success):
  * {
  *   "success": true,
- *   "source": "timedtext" | "youtube-transcript-api" | "youtube-transcript-io",
+ *   "source": "gemini-summary" | "innertube-api",
  *   "transcript": "Full transcript text here..."
  * }
  * 
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
     const lang = body.lang || "en";
     console.log("📝 [API] Language:", lang);
 
-    // Fetch transcript using 3-tier fallback system
+    // Fetch transcript using 2-tier fallback system
     console.log("🔄 [API] Calling fetchTranscriptWithFallback...");
     const result = await fetchTranscriptWithFallback(videoId, lang);
 

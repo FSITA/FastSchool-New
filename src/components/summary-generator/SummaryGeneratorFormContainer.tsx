@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import UniversalForm from "@/components/presentation/universal-form/UniversalForm";
 import FormField from "@/components/shared/FormField";
 import { SummaryGeneratorViewer } from "./summary-viewer";
@@ -28,18 +28,33 @@ export default function SummaryGeneratorFormContainer({ onLoadingStateChange }: 
   const [generatedContent, setGeneratedContent] = useState("");
   const [generatedOutlines, setGeneratedOutlines] = useState<SummaryOutline[]>([]);
   const [currentSummary, setCurrentSummary] = useState<SummaryGenerator | null>(null);
+  const [extractionMessage, setExtractionMessage] = useState<string | undefined>(undefined);
+  const fallbackNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const FALLBACK_NOTICE_IT =
+    "Non siamo riusciti a recuperare la trascrizione dai sottotitoli. Ora stiamo generando la trascrizione direttamente dall'audio: potrebbe volerci qualche istante (un video di 5 minuti richiede circa 15 secondi).";
 
   const handleUniversalFormNext = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const step = formData.get("step") as string;
+    const activeStep = step ? parseInt(step, 10) : -1;
     setUniversalFormData(formData);
     setExtractionError("");
     setIsExtracting(true);
+    setExtractionMessage(undefined);
+
+    if (fallbackNoticeTimeoutRef.current) {
+      clearTimeout(fallbackNoticeTimeoutRef.current);
+      fallbackNoticeTimeoutRef.current = null;
+    }
+    if (activeStep === 2) {
+      fallbackNoticeTimeoutRef.current = setTimeout(() => {
+        setExtractionMessage(FALLBACK_NOTICE_IT);
+      }, 6000);
+    }
 
     try {
       // Determine source type for loading message
-      const step = formData.get("step") as string;
-      const activeStep = step ? parseInt(step, 10) : -1;
       let sourceType: "PDF" | "YouTube" | "Wikipedia" | "Notes" | "Files" | undefined;
       
       if (activeStep === 0) sourceType = "Notes";
@@ -61,15 +76,22 @@ export default function SummaryGeneratorFormContainer({ onLoadingStateChange }: 
       const processedData: ProcessedContent = await response.json();
       setExtractedContent(processedData);
       setIsExtracting(false);
+      setExtractionMessage(undefined);
       setFormStep(1);
       toast.success('Contenuto estratto con successo!');
     } catch (error) {
       console.error('Error extracting content:', error);
       setIsExtracting(false);
+      setExtractionMessage(undefined);
       const errorMsg = error instanceof Error ? error.message : 'Errore durante l\'estrazione del contenuto';
       setExtractionError(errorMsg);
       toast.error(errorMsg);
       // Don't move to next step if extraction fails
+    } finally {
+      if (fallbackNoticeTimeoutRef.current) {
+        clearTimeout(fallbackNoticeTimeoutRef.current);
+        fallbackNoticeTimeoutRef.current = null;
+      }
     }
   };
 
@@ -241,6 +263,11 @@ export default function SummaryGeneratorFormContainer({ onLoadingStateChange }: 
     setExtractedContent(null);
     setExtractionError("");
     setSummaryTitle("");
+    setExtractionMessage(undefined);
+    if (fallbackNoticeTimeoutRef.current) {
+      clearTimeout(fallbackNoticeTimeoutRef.current);
+      fallbackNoticeTimeoutRef.current = null;
+    }
   };
 
   // Determine source type for extraction loader
@@ -273,7 +300,10 @@ export default function SummaryGeneratorFormContainer({ onLoadingStateChange }: 
 
       {/* Show extraction notification bar at top-right */}
       {isExtracting && (
-        <ContentExtractionNotificationBar sourceType={getExtractionSourceType()} />
+        <ContentExtractionNotificationBar
+          sourceType={getExtractionSourceType()}
+          message={extractionMessage}
+        />
       )}
 
       {/* Show extraction error if any */}

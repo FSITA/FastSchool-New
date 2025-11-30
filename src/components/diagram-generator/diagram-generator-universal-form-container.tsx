@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import UniversalForm from "@/components/presentation/universal-form/UniversalForm";
 import DiagramGenerationStep from "./diagram-generation-step";
 import DiagramDisplay from "./diagram-display";
@@ -17,19 +17,34 @@ export default function DiagramGeneratorUniversalFormContainer() {
   const [mermaidCode, setMermaidCode] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [extractionMessage, setExtractionMessage] = useState<string | undefined>(undefined);
+  const fallbackNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const FALLBACK_NOTICE_IT =
+    "Non siamo riusciti a recuperare la trascrizione dai sottotitoli. Ora stiamo generando la trascrizione direttamente dall'audio: potrebbe volerci qualche istante (un video di 5 minuti richiede circa 15 secondi).";
 
   const handleUniversalFormNext = async (e: React.FormEvent<HTMLFormElement>) => {
     console.log("🔄 handleUniversalFormNext called");
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const step = formData.get("step") as string;
+    const activeStep = step ? parseInt(step, 10) : -1;
     setUniversalFormData(formData);
     setExtractionError("");
     setIsExtracting(true);
+    setExtractionMessage(undefined);
+
+    if (fallbackNoticeTimeoutRef.current) {
+      clearTimeout(fallbackNoticeTimeoutRef.current);
+      fallbackNoticeTimeoutRef.current = null;
+    }
+    if (activeStep === 2) {
+      fallbackNoticeTimeoutRef.current = setTimeout(() => {
+        setExtractionMessage(FALLBACK_NOTICE_IT);
+      }, 6000);
+    }
 
     try {
       // Determine source type for loading message
-      const step = formData.get("step") as string;
-      const activeStep = step ? parseInt(step, 10) : -1;
       let sourceType: "PDF" | "YouTube" | "Wikipedia" | "Notes" | "Files" | undefined;
       
       if (activeStep === 0) sourceType = "Notes";
@@ -51,14 +66,21 @@ export default function DiagramGeneratorUniversalFormContainer() {
       const processedData: ProcessedContent = await response.json();
       setExtractedContent(processedData);
       setIsExtracting(false);
+      setExtractionMessage(undefined);
       setFormStep(1);
       toast.success('Contenuto estratto con successo!');
     } catch (error) {
       console.error('Error extracting content:', error);
       setIsExtracting(false);
+      setExtractionMessage(undefined);
       const errorMsg = error instanceof Error ? error.message : 'Errore durante l\'estrazione del contenuto';
       setExtractionError(errorMsg);
       toast.error(errorMsg);
+    } finally {
+      if (fallbackNoticeTimeoutRef.current) {
+        clearTimeout(fallbackNoticeTimeoutRef.current);
+        fallbackNoticeTimeoutRef.current = null;
+      }
     }
   };
 
@@ -173,7 +195,10 @@ export default function DiagramGeneratorUniversalFormContainer() {
 
       {/* Show extraction notification bar at top-right */}
       {isExtracting && (
-        <ContentExtractionNotificationBar sourceType={getExtractionSourceType()} />
+        <ContentExtractionNotificationBar
+          sourceType={getExtractionSourceType()}
+          message={extractionMessage}
+        />
       )}
 
       {/* Show extraction error if any */}

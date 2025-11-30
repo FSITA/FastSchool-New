@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,10 +16,15 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable'; // This import registers the autotable plugin with jspdf
 import html2canvas from 'html2canvas';
 
-export function FlashcardGenerator() {
+export function FlashcardGenerator({ onLoadingChange }: { onLoadingChange?: (isLoading: boolean) => void } = { onLoadingChange: undefined }) {
   const { flashcards, isLoading, error, generateFlashcards, clearFlashcards, clearError } = useFlashcards()
   const { isHealthy, isLoading: healthLoading, error: healthError, checkHealth } = useHealthCheck()
   const [flashcardLanguage, setFlashcardLanguage] = useState<string>('english')
+
+  // Notify parent component about loading state changes
+  useEffect(() => {
+    onLoadingChange?.(isLoading)
+  }, [isLoading, onLoadingChange])
 
   console.log("🎮 FlashcardGenerator render:", {
     flashcardsCount: flashcards.length,
@@ -482,14 +487,11 @@ export function FlashcardGenerator() {
     <div>
       {isLoading ? (
           /* Loading State */
-          <div className="space-y-8">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-foreground mb-4 text-balance">Generazione delle tue Flashcard</h1>
-              <p className="text-xl text-muted-foreground text-pretty max-w-2xl mx-auto">
-                Attendi mentre creiamo le tue flashcard interattive...
-              </p>
-            </div>
+          <div className="flex flex-col items-center justify-center min-h-[400px]">
             <FlashcardLoading />
+            <h1 className="text-4xl font-bold text-foreground mb-4 text-center mt-8">
+              Generazione delle tue Flashcard
+            </h1>
           </div>
         ) : flashcards.length === 0 ? (
           /* Input Interface */

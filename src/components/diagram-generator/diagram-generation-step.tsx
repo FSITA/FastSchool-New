@@ -24,10 +24,7 @@ export default function DiagramGenerationStep({
           </div>
         </div>
 
-        {/* Success Message */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          ✅ Contenuto elaborato con successo
-        </h2>
+        
 
         {/* Information Box */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 max-w-2xl mx-auto">

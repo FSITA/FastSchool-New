@@ -1,9 +1,10 @@
 import { parseStringPromise } from "xml2js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { env } from "@/env";
 import type { TranscriptResult } from "./types";
 import { cookieManager } from "./cookie-manager";
 import { getUserAgentForClient } from "./user-agents";
-import { getClientConfig, rotateClientConfig, resetClientConfig, type ClientConfig } from "./client-types";
+import { getClientConfig, rotateClientConfig, resetClientConfig } from "./client-types";
 import { 
   fetchWithRetry, 
   generateHeaders, 
@@ -60,6 +61,9 @@ async function tier1InnertubeApi(
   console.log("📝 [Tier 1] Video ID:", videoId);
   console.log("📝 [Tier 1] Language:", lang);
   console.log("📝 [Tier 1] Two-step flow:", useTwoStepFlow ? "enabled" : "disabled");
+
+  // Always start from default client (ANDROID) for each transcript request
+  resetClientConfig();
 
   // Get client config (start with ANDROID for best compatibility)
   let clientConfig = getClientConfig();
@@ -191,23 +195,25 @@ async function tier1InnertubeApi(
       console.log(`📊 [Tier 1] YouTube API response status: ${apiResponse.status}`);
       
       if (!apiResponse.ok) {
-        if (apiResponse.status === 429 || apiResponse.status >= 500) {
-          if (clientAttempt < maxClientAttempts - 1) {
-            console.log(`🔄 [Tier 1] API error ${apiResponse.status}, rotating client...`);
-            clientConfig = rotateClientConfig();
-            await randomDelay(5, 8); // Longer delay for rate limits
-            continue;
-          }
-        }
-        // Read error text
         const errorText = await apiResponse.text();
         console.error(`❌ [Tier 1] API error: ${apiResponse.status} - ${errorText.substring(0, 200)}`);
+
+        if (clientAttempt < maxClientAttempts - 1) {
+          console.log(`🔄 [Tier 1] API error ${apiResponse.status}, rotating client...`);
+          clientConfig = rotateClientConfig();
+          await randomDelay(
+            apiResponse.status === 429 ? 5 : 3,
+            apiResponse.status === 429 ? 8 : 5
+          );
+          continue;
+        }
+
         return { success: false, error: `API error: ${apiResponse.status}` };
       }
       
       const playerData = await apiResponse.json() as any;
 
-        // Log the structure for debugging
+      // Log the structure for debugging
       console.log(`🔍 [Tier 1] Player data keys:`, Object.keys(playerData || {}));
       console.log(`🔍 [Tier 1] Captions structure:`, playerData?.captions ? Object.keys(playerData.captions) : 'no captions key');
       
@@ -429,112 +435,87 @@ async function tier1InnertubeApi(
 }
 
 /**
- * Tier 2: Guaranteed Fallback - Use youtube-transcript-io API
- * This is a paid service but very reliable
+ * Tier 2: Gemini summary transcription fallback
+ * Generates a concise transcript summary using Gemini 2.5 Flash
  */
-async function tier2YoutubeTranscriptIo(
+async function tier2GeminiSummary(
   videoId: string
 ): Promise<{ success: boolean; transcript?: string; error?: string }> {
-  console.log("🚀 [Tier 2] Starting youtube-transcript-io API fetch");
-  console.log("📝 [Tier 2] Video ID:", videoId);
-
-  // Check if API key is configured
-  const apiKey = env.YT_TRANSCRIPT_IO_KEY;
-  if (!apiKey || apiKey.trim().length === 0) {
-    console.warn("⚠️ [Tier 2] YT_TRANSCRIPT_IO_KEY not configured - skipping Tier 2");
-    return {
-      success: false,
-      error: "YT_TRANSCRIPT_IO_KEY not configured",
-    };
-  }
-
-  console.log("✅ [Tier 2] API key found (length:", apiKey.length, "chars)");
+  console.log("🚀 [Tier 2: Gemini] Starting Gemini summary transcription");
+  console.log("📝 [Tier 2: Gemini] Video ID:", videoId);
 
   try {
-    const apiUrl = "https://www.youtube-transcript.io/api/transcripts";
-    console.log("🔗 [Tier 2] API URL:", apiUrl);
+    if (!env.GEMINI_API_KEY || env.GEMINI_API_KEY.trim().length === 0) {
+      console.warn("⚠️ [Tier 2: Gemini] GEMINI_API_KEY not configured - skipping Gemini tier");
+      return {
+        success: false,
+        error: "GEMINI_API_KEY not configured",
+      };
+    }
 
-    const requestBody = {
-      videoIds: [videoId],
-    };
-    console.log("📤 [Tier 2] Request body:", JSON.stringify(requestBody));
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    console.log("🔗 [Tier 2: Gemini] Video URL:", videoUrl);
 
-    console.log("🔄 [Tier 2] Sending POST request...");
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(requestBody),
+    const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const instruction = "Provide the summary transcription of the video. No timestamps.";
+    console.log("📝 [Tier 2: Gemini] Instruction:", instruction);
+
+    console.log("🔄 [Tier 2: Gemini] Sending request to Gemini model...");
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: instruction },
+            {
+              fileData: {
+                mimeType: "video/*",
+                fileUri: videoUrl,
+              },
+            },
+          ],
+        },
+      ],
     });
 
-    console.log("📊 [Tier 2] Response status:", response.status);
-    console.log("📊 [Tier 2] Response headers:", Object.fromEntries(response.headers.entries()));
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("❌ [Tier 2] HTTP error response:", errorText);
+    const response = result.response;
+    if (!response) {
+      console.error("❌ [Tier 2: Gemini] Gemini returned no response object");
       return {
         success: false,
-        error: `HTTP ${response.status}: ${response.statusText}`,
+        error: "Gemini returned no response",
       };
     }
 
-    const data = await response.json();
-    console.log("📊 [Tier 2] Response data received");
-    console.log("📊 [Tier 2] Response keys:", Object.keys(data));
+    const text = response.text()?.trim();
+    console.log("📊 [Tier 2: Gemini] Gemini response finish reason:", response.candidates?.[0]?.finishReason);
 
-    // Extract transcript from response
-    // The API response structure may vary, so we need to handle different formats
-    let transcript: string | undefined;
-
-    if (data.transcripts && Array.isArray(data.transcripts) && data.transcripts.length > 0) {
-      const firstTranscript = data.transcripts[0];
-      if (firstTranscript.transcript) {
-        transcript = firstTranscript.transcript;
-      } else if (firstTranscript.text) {
-        transcript = firstTranscript.text;
-      }
-    } else if (data.transcript) {
-      transcript = data.transcript;
-    } else if (data.text) {
-      transcript = data.text;
-    } else if (data[videoId] && data[videoId].transcript) {
-      transcript = data[videoId].transcript;
-    }
-
-    if (!transcript || transcript.trim().length === 0) {
-      console.warn("⚠️ [Tier 2] No transcript found in response");
-      console.log("📊 [Tier 2] Full response structure:", JSON.stringify(data, null, 2));
+    if (!text || text.length === 0) {
+      console.warn("⚠️ [Tier 2: Gemini] Gemini response has no text content");
       return {
         success: false,
-        error: "No transcript found in API response",
+        error: "Gemini returned empty summary",
       };
     }
 
-    console.log("✅ [Tier 2] Transcript extracted successfully");
-    console.log("📊 [Tier 2] Transcript length:", transcript.length);
-    console.log("📝 [Tier 2] Transcript preview (first 200 chars):", transcript.substring(0, 200));
+    console.log("✅ [Tier 2: Gemini] Gemini summary retrieved successfully");
+    console.log(`📊 [Tier 2: Gemini] Summary length: ${text.length}`);
+    console.log(`📝 [Tier 2: Gemini] Summary preview: ${text.substring(0, 200)}`);
 
     return {
       success: true,
-      transcript: transcript.trim(),
+      transcript: text,
     };
   } catch (error) {
-    console.error("❌ [Tier 2] Error occurred:", error);
-    console.error("❌ [Tier 2] Error details:", {
-      message: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      errorType: error instanceof Error ? error.constructor.name : typeof error,
-    });
+    console.error("❌ [Tier 2: Gemini] Gemini request failed", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error in Tier 2",
+      error: error instanceof Error ? error.message : "Unknown error in Gemini summary tier",
     };
   }
 }
-
 /**
  * Main orchestrator function - tries all tiers sequentially until one succeeds
  */
@@ -557,11 +538,11 @@ export async function fetchTranscriptWithFallback(
     };
   }
 
-  // Tier 1: Try YouTube Innertube API (the working method)
+  // Tier 1: YouTube Innertube API (captions)
   console.log("\n📋 [fetchTranscriptWithFallback] Attempting Tier 1 (innertube-api)...");
   const tier1Result = await tier1InnertubeApi(videoId, lang);
   if (tier1Result.success && tier1Result.transcript) {
-    console.log("✅ [fetchTranscriptWithFallback] Tier 1 SUCCEEDED!");
+    console.log("✅ [fetchTranscriptWithFallback] Tier 1 SUCCEEDED (Innertube)!");
     console.log("=".repeat(60));
     return {
       success: true,
@@ -571,15 +552,15 @@ export async function fetchTranscriptWithFallback(
   }
   console.log("❌ [fetchTranscriptWithFallback] Tier 1 failed:", tier1Result.error);
 
-  // Tier 2: Try youtube-transcript-io API
-  console.log("\n📋 [fetchTranscriptWithFallback] Attempting Tier 2 (youtube-transcript-io)...");
-  const tier2Result = await tier2YoutubeTranscriptIo(videoId);
+  // Tier 2: Gemini summary transcription fallback
+  console.log("\n📋 [fetchTranscriptWithFallback] Attempting Tier 2 (gemini-summary)...");
+  const tier2Result = await tier2GeminiSummary(videoId);
   if (tier2Result.success && tier2Result.transcript) {
-    console.log("✅ [fetchTranscriptWithFallback] Tier 2 SUCCEEDED!");
+    console.log("✅ [fetchTranscriptWithFallback] Tier 2 SUCCEEDED (Gemini)!");
     console.log("=".repeat(60));
     return {
       success: true,
-      source: "youtube-transcript-io",
+      source: "gemini-summary",
       transcript: tier2Result.transcript,
     };
   }

@@ -238,12 +238,69 @@ export async function POST(request: NextRequest) {
       ? enhancePromptForAccessibility(basePrompt, disabilityType, language)
       : basePrompt;
 
-    const result = await model.generateContent(promptText);
-    const response = result.response.text();
+    console.log("Sending request to Gemini API (streaming mode)");
+    const result = await model.generateContentStream(promptText);
 
-    console.log("Successfully generated lesson plan");
+    const stream = new ReadableStream({
+      async start(controller) {
+        console.log("Starting stream for lesson plan generation");
+        let buffer = '';
+        let errorOccurred = false;
+        
+        try {
+          for await (const chunk of result.stream) {
+            try {
+              const chunkText = chunk.text();
+              if (chunkText && chunkText.length > 0) {
+                buffer += chunkText;
+                
+                // Send chunk to client immediately
+                controller.enqueue(new TextEncoder().encode(chunkText));
+              }
+            } catch (chunkError) {
+              console.error("Error processing chunk:", chunkError);
+              // Continue with next chunk
+            }
+          }
+          
+          // Validate we got some content
+          if (buffer.trim().length === 0) {
+            throw new Error('No content generated from AI');
+          }
+          
+          console.log("Stream completed successfully, total length:", buffer.length);
+          controller.close();
+        } catch (error) {
+          errorOccurred = true;
+          console.error("Error in stream:", error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          
+          try {
+            controller.enqueue(new TextEncoder().encode(`\n\nError: ${errorMessage}`));
+          } catch (enqueueError) {
+            console.error("Error enqueueing error message:", enqueueError);
+          }
+          
+          try {
+            controller.close();
+          } catch (closeError) {
+            console.error("Error closing controller:", closeError);
+          }
+        }
+      },
+    });
 
-    return NextResponse.json({ content: response });
+    return new Response(stream, {
+      headers: {
+        // Keep raw text stream (client parses plain text), but reduce buffering
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        // Encourage immediate flushing through proxies where applicable
+        "Transfer-Encoding": "chunked",
+        "X-Accel-Buffering": "no",
+      },
+    });
   } catch (error) {
     console.error('Error generating lesson plan:', error);
     

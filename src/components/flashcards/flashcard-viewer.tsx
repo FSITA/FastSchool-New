@@ -55,8 +55,11 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
         </div>
         <div className="flex-1 max-w-xs bg-muted rounded-full h-2">
           <div
-            className="bg-primary h-2 rounded-full transition-all duration-300"
-            style={{ width: `${((currentIndex + 1) / flashcards.length) * 100}%` }}
+            className="h-2 rounded-full transition-all duration-300"
+            style={{ 
+              width: `${((currentIndex + 1) / flashcards.length) * 100}%`,
+              backgroundColor: '#0E85F2'
+            }}
           />
         </div>
       </div>
@@ -123,7 +126,11 @@ export function FlashcardViewer({ flashcards }: FlashcardViewerProps) {
           Precedente
         </Button>
 
-        <Button onClick={handleFlip} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+        <Button 
+          onClick={handleFlip} 
+          className="text-white hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: '#0E85F2' }}
+        >
           <RotateCcw className="h-4 w-4 mr-2" />
           Capovolgi Carta
         </Button>

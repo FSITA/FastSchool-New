@@ -19,6 +19,7 @@ export interface LessonPlanSection {
 export interface LessonPlanViewerProps {
   lessonPlan: LessonPlan;
   generatedContent: string;
+  generatedSections?: LessonPlanSection[];
   onGenerateAgain: () => void;
 }
 

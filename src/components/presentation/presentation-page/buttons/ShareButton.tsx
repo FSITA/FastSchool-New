@@ -28,10 +28,10 @@ export function ShareButton() {
       <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Coming Soon</DialogTitle>
+            <DialogTitle>Prossimamente</DialogTitle>
             <DialogDescription>
-              The sharing functionality will be available soon. Stay tuned for
-              updates!
+              La funzionalità di condivisione sarà disponibile a breve. Resta
+              aggiornato per gli aggiornamenti!
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
