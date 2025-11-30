@@ -113,7 +113,7 @@ const dashboardTools = [
     icon: '/icons/quiz.png',
     banner: '/banners/quiz.png',
     featured: true,
-    starred: true,
+    starred: false,
   },
   {
     name: 'Lezioni IA',
@@ -122,7 +122,7 @@ const dashboardTools = [
     icon: '/icons/lesson.png',
     banner: '/banners/lesson.png',
     featured: true,
-    starred: true,
+    starred: false,
   },
   {
     name: 'Presentazioni IA Beta',
@@ -131,7 +131,7 @@ const dashboardTools = [
     icon: '/icons/presentation.png',
     banner: '/banners/presentation.png',
     featured: true,
-    starred: true,
+    starred: false,
   },
   {
     name: 'Generatore di Flashcard',

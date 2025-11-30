@@ -179,54 +179,171 @@ export async function POST(request: NextRequest) {
 
     // Step 6: Get or create Stripe customer
     console.log('[CHECKOUT] Step 6: Getting or creating Stripe customer...');
+    console.log('[CHECKOUT] User ID for database lookup:', user.id);
+    console.log('[CHECKOUT] User email:', user.email);
+    
     let customerId: string;
     
     try {
-      const subscription = await prisma.subscription.findUnique({
-        where: { userId: user.id },
-      });
+      // Step 6a: Ensure User exists in Prisma database (required for Subscription foreign key)
+      console.log('[CHECKOUT] Step 6a: Checking if User exists in Prisma database...');
+      let dbUser;
+      try {
+        dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+        });
+        console.log('[CHECKOUT] User lookup result:', {
+          found: !!dbUser,
+          userId: dbUser?.id,
+          email: dbUser?.email,
+        });
+      } catch (userLookupError: any) {
+        console.error('[CHECKOUT] ❌ Error looking up user:', {
+          error: userLookupError.message,
+          code: userLookupError.code,
+        });
+        throw userLookupError;
+      }
 
-      console.log('[CHECKOUT] Database subscription lookup:', {
-        found: !!subscription,
-        hasStripeCustomerId: !!subscription?.stripeCustomerId,
-        stripeCustomerId: subscription?.stripeCustomerId,
-      });
+      // If user doesn't exist in Prisma DB, create it
+      if (!dbUser) {
+        console.log('[CHECKOUT] User not found in Prisma DB, creating user record...');
+        try {
+          dbUser = await prisma.user.create({
+            data: {
+              id: user.id,
+              email: user.email || null,
+              name: user.user_metadata?.name || user.email?.split('@')[0] || null,
+            },
+          });
+          console.log('[CHECKOUT] ✅ User created in Prisma DB:', {
+            userId: dbUser.id,
+            email: dbUser.email,
+          });
+        } catch (createUserError: any) {
+          console.error('[CHECKOUT] ❌ Failed to create user in Prisma DB:', {
+            error: createUserError.message,
+            code: createUserError.code,
+            meta: createUserError.meta,
+          });
+          throw createUserError;
+        }
+      } else {
+        console.log('[CHECKOUT] ✅ User exists in Prisma DB');
+      }
+
+      // Step 6b: Ensure subscription record exists (initialize trial if needed)
+      console.log('[CHECKOUT] Step 6b: Checking if subscription record exists...');
+      let subscription;
+      try {
+        subscription = await prisma.subscription.findUnique({
+          where: { userId: user.id },
+        });
+        console.log('[CHECKOUT] Database subscription lookup result:', {
+          found: !!subscription,
+          subscriptionId: subscription?.id,
+          hasStripeCustomerId: !!subscription?.stripeCustomerId,
+          stripeCustomerId: subscription?.stripeCustomerId,
+          subscriptionStatus: subscription?.subscriptionStatus,
+        });
+      } catch (subLookupError: any) {
+        console.error('[CHECKOUT] ❌ Error looking up subscription:', {
+          error: subLookupError.message,
+          code: subLookupError.code,
+        });
+        throw subLookupError;
+      }
+
+      // If no subscription exists, create one with trial
+      if (!subscription) {
+        console.log('[CHECKOUT] No subscription record found, creating one with trial...');
+        try {
+          const trialStart = new Date();
+          const trialEnd = new Date();
+          trialEnd.setDate(trialEnd.getDate() + 2);
+          
+          subscription = await prisma.subscription.create({
+            data: {
+              userId: user.id,
+              trialStart,
+              trialEnd,
+              subscriptionStatus: 'trialing',
+            },
+          });
+          console.log('[CHECKOUT] ✅ Subscription record created with trial:', {
+            subscriptionId: subscription.id,
+            trialEnd: trialEnd.toISOString(),
+          });
+        } catch (createError: any) {
+          console.error('[CHECKOUT] ❌ Failed to create subscription record:', {
+            error: createError.message,
+            code: createError.code,
+            meta: createError.meta,
+          });
+          throw createError;
+        }
+      } else {
+        console.log('[CHECKOUT] ✅ Subscription record exists');
+      }
 
       customerId = subscription?.stripeCustomerId || '';
 
       if (!customerId) {
-        console.log('[CHECKOUT] No existing customer, creating new Stripe customer...');
+        console.log('[CHECKOUT] No existing Stripe customer, creating new one...');
         console.log('[CHECKOUT] Customer data:', {
           email: user.email || 'NO EMAIL',
           userId: user.id,
         });
 
-        const customer = await stripe.customers.create({
-          email: user.email || undefined,
-          metadata: {
-            userId: user.id,
-          },
-        });
+        let customer;
+        try {
+          customer = await stripe.customers.create({
+            email: user.email || undefined,
+            metadata: {
+              userId: user.id,
+            },
+          });
+          console.log('[CHECKOUT] ✅ Stripe customer created:', {
+            customerId: customer.id,
+            email: customer.email,
+          });
+        } catch (stripeError: any) {
+          console.error('[CHECKOUT] ❌❌❌ STRIPE CUSTOMER CREATION FAILED ❌❌❌');
+          console.error('[CHECKOUT] Stripe error:', {
+            type: stripeError?.type,
+            code: stripeError?.code,
+            message: stripeError?.message,
+            param: stripeError?.param,
+          });
+          throw stripeError;
+        }
 
         customerId = customer.id;
-        console.log('[CHECKOUT] ✅ Stripe customer created:', {
-          customerId,
-          email: customer.email,
-        });
 
         // Update subscription with customer ID
         console.log('[CHECKOUT] Updating database with customer ID...');
-        await prisma.subscription.upsert({
-          where: { userId: user.id },
-          create: {
-            userId: user.id,
-            stripeCustomerId: customerId,
-          },
-          update: {
-            stripeCustomerId: customerId,
-          },
+        console.log('[CHECKOUT] Update data:', {
+          userId: user.id,
+          stripeCustomerId: customerId,
         });
-        console.log('[CHECKOUT] ✅ Database updated with customer ID');
+        
+        try {
+          await prisma.subscription.update({
+            where: { userId: user.id },
+            data: { stripeCustomerId: customerId },
+          });
+          console.log('[CHECKOUT] ✅ Database updated with customer ID');
+        } catch (updateError: any) {
+          console.error('[CHECKOUT] ❌❌❌ DATABASE UPDATE FAILED ❌❌❌');
+          console.error('[CHECKOUT] Update error details:', {
+            error: updateError.message,
+            code: updateError.code,
+            meta: updateError.meta,
+            cause: updateError.cause,
+          });
+          console.error('[CHECKOUT] Full error object:', JSON.stringify(updateError, Object.getOwnPropertyNames(updateError), 2));
+          throw updateError;
+        }
       } else {
         console.log('[CHECKOUT] ✅ Using existing customer:', customerId);
         
@@ -240,6 +357,12 @@ export async function POST(request: NextRequest) {
           });
         } catch (verifyError: any) {
           console.error('[CHECKOUT] ⚠️ Customer not found in Stripe, creating new one...');
+          console.error('[CHECKOUT] Verify error:', {
+            type: verifyError?.type,
+            code: verifyError?.code,
+            message: verifyError?.message,
+          });
+          
           const customer = await stripe.customers.create({
             email: user.email || undefined,
             metadata: {
@@ -247,19 +370,50 @@ export async function POST(request: NextRequest) {
             },
           });
           customerId = customer.id;
-          await prisma.subscription.update({
-            where: { userId: user.id },
-            data: { stripeCustomerId: customerId },
-          });
-          console.log('[CHECKOUT] ✅ New customer created and saved:', customerId);
+          
+          try {
+            await prisma.subscription.update({
+              where: { userId: user.id },
+              data: { stripeCustomerId: customerId },
+            });
+            console.log('[CHECKOUT] ✅ New customer created and saved:', customerId);
+          } catch (updateError: any) {
+            console.error('[CHECKOUT] ❌ Failed to update database with new customer:', {
+              error: updateError.message,
+              code: updateError.code,
+              meta: updateError.meta,
+            });
+            throw updateError;
+          }
         }
       }
-    } catch (dbError) {
+    } catch (dbError: any) {
       console.error('[CHECKOUT] ❌❌❌ DATABASE ERROR ❌❌❌');
-      console.error('[CHECKOUT] Error:', dbError);
+      console.error('[CHECKOUT] Error type:', typeof dbError);
+      console.error('[CHECKOUT] Error name:', dbError?.name);
+      console.error('[CHECKOUT] Error message:', dbError?.message);
+      console.error('[CHECKOUT] Error code:', dbError?.code);
+      console.error('[CHECKOUT] Error meta:', dbError?.meta);
+      console.error('[CHECKOUT] Error cause:', dbError?.cause);
       console.error('[CHECKOUT] Error stack:', dbError instanceof Error ? dbError.stack : 'No stack');
+      console.error('[CHECKOUT] Full error object:', JSON.stringify(dbError, Object.getOwnPropertyNames(dbError), 2));
+      
+      // Check for specific Prisma errors
+      if (dbError?.code === 'P2002') {
+        console.error('[CHECKOUT] Unique constraint violation detected');
+      } else if (dbError?.code === 'P2025') {
+        console.error('[CHECKOUT] Record not found');
+      } else if (dbError?.code === 'P2003') {
+        console.error('[CHECKOUT] Foreign key constraint violation');
+      }
+      
       return NextResponse.json(
-        { error: 'Database error while managing customer' },
+        { 
+          error: 'Database error while managing customer',
+          details: dbError?.message || 'Unknown database error',
+          code: dbError?.code,
+          meta: dbError?.meta,
+        },
         { status: 500 }
       );
     }
