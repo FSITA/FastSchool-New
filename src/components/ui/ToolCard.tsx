@@ -171,12 +171,36 @@ export function ToolCard({
     )
   }
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
     console.log('[ToolCard] ========== AI TOOL CARD CLICKED ==========');
     console.log('[ToolCard] Tool Name:', title);
     console.log('[ToolCard] Tool Href:', href);
     console.log('[ToolCard] Timestamp:', new Date().toISOString());
     console.log('[ToolCard] User is navigating to AI page...');
+    
+    // Monitor if navigation is blocked or redirected
+    const startTime = Date.now();
+    const checkRedirect = () => {
+      setTimeout(() => {
+        const currentPath = window.location.pathname;
+        const elapsed = Date.now() - startTime;
+        
+        if (currentPath === '/pricing') {
+          console.error('[ToolCard] ❌❌❌ REDIRECTED TO PRICING ❌❌❌');
+          console.error('[ToolCard] User was redirected to pricing page');
+          console.error('[ToolCard] This means middleware blocked access');
+          console.error('[ToolCard] Check SERVER logs for [Middleware] and [hasActiveAccessEdge] logs');
+        } else if (currentPath === href) {
+          console.log('[ToolCard] ✅ Successfully navigated to:', currentPath);
+        } else {
+          console.warn('[ToolCard] ⚠️ Navigation may have been intercepted');
+          console.warn('[ToolCard] Expected:', href);
+          console.warn('[ToolCard] Current:', currentPath);
+        }
+      }, 500);
+    };
+    
+    checkRedirect();
     console.log('[ToolCard] ===========================================');
   }
 
