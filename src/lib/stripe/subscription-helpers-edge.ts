@@ -32,31 +32,20 @@ export async function initializeTrialEdge(
       }
     });
     
-    // Check if subscription already exists
-    const tableNames = ['Subscription', 'subscription'];
-    let existing = null;
-    
-    for (const tableName of tableNames) {
-      try {
-        const { data, error } = await queryClient
-          .from(tableName)
-          .select('*')
-          .or(`userId.eq.${userId},user_id.eq.${userId}`)
-          .maybeSingle();
-        
-        if (data && !error) {
-          existing = data;
-          console.log(`[initializeTrialEdge] ✅ Found existing subscription in "${tableName}"`);
-          break;
-        }
-      } catch (err) {
-        // Continue to next table name
+    // Check if subscription already exists (use exact Prisma table/column names)
+    try {
+      const { data, error } = await queryClient
+        .from('Subscription')
+        .select('*')
+        .eq('userId', userId)
+        .maybeSingle();
+      
+      if (data && !error) {
+        console.log('[initializeTrialEdge] ✅ Subscription already exists');
+        return true;
       }
-    }
-    
-    if (existing) {
-      console.log('[initializeTrialEdge] ✅ Subscription already exists');
-      return true;
+    } catch (err) {
+      console.log('[initializeTrialEdge] Error checking existing subscription:', err);
     }
     
     // Create new trial
@@ -69,54 +58,34 @@ export async function initializeTrialEdge(
       trialEnd: trialEnd.toISOString(),
     });
     
-    // Try to insert into Subscription table
-    for (const tableName of tableNames) {
-      try {
-        const insertData: any = {
-          userId: userId,
-          trialStart: trialStart.toISOString(),
-          trialEnd: trialEnd.toISOString(),
-          subscriptionStatus: 'trialing',
-        };
-        
-        // Also try snake_case version
-        const insertDataSnake: any = {
-          user_id: userId,
-          trial_start: trialStart.toISOString(),
-          trial_end: trialEnd.toISOString(),
-          subscription_status: 'trialing',
-        };
-        
-        const { data, error } = await queryClient
-          .from(tableName)
-          .insert(insertData)
-          .select()
-          .single();
-        
-        if (data && !error) {
-          console.log(`[initializeTrialEdge] ✅✅✅ TRIAL CREATED IN "${tableName}" ✅✅✅`);
-          return true;
-        }
-        
-        // Try snake_case if camelCase failed
-        if (error) {
-          const { data: dataSnake, error: errorSnake } = await queryClient
-            .from(tableName)
-            .insert(insertDataSnake)
-            .select()
-            .single();
-          
-          if (dataSnake && !errorSnake) {
-            console.log(`[initializeTrialEdge] ✅✅✅ TRIAL CREATED IN "${tableName}" (snake_case) ✅✅✅`);
-            return true;
-          }
-        }
-      } catch (err: any) {
-        console.log(`[initializeTrialEdge] Failed to insert into "${tableName}":`, err.message);
+    // Insert into Subscription table using exact Prisma column names (camelCase)
+    try {
+      const insertData = {
+        userId: userId,
+        trialStart: trialStart.toISOString(),
+        trialEnd: trialEnd.toISOString(),
+        subscriptionStatus: 'trialing',
+      };
+      
+      const { data, error } = await queryClient
+        .from('Subscription')
+        .insert(insertData)
+        .select()
+        .single();
+      
+      if (data && !error) {
+        console.log('[initializeTrialEdge] ✅✅✅ TRIAL CREATED SUCCESSFULLY ✅✅✅');
+        return true;
+      } else if (error) {
+        console.error('[initializeTrialEdge] ❌ Failed to create trial:', error);
+        return false;
       }
+    } catch (err: any) {
+      console.error('[initializeTrialEdge] ❌ Exception creating trial:', err.message);
+      return false;
     }
     
-    console.error('[initializeTrialEdge] ❌ Failed to create trial in any table');
+    console.error('[initializeTrialEdge] ❌ Failed to create trial');
     return false;
   } catch (error) {
     console.error('[initializeTrialEdge] ❌❌❌ ERROR ❌❌❌');
@@ -158,119 +127,44 @@ export async function hasActiveAccessEdge(
       console.log('[hasActiveAccessEdge] ⚠️ Service role key not found, using anon key (may have permission issues)');
     }
     
-    // Prisma creates tables with the exact model name (capitalized)
-    // But PostgreSQL/Supabase might store them differently
-    // Try multiple table name variations
+    // Prisma creates tables with exact model name (capitalized) and columns as defined (camelCase)
+    // Use exact names: "Subscription" table with "userId" column
     let subscription = null;
-    let error = null;
     
-    // Try different table name variations
-    // Prisma creates tables with exact model name (capitalized) and columns as defined
-    const tableNames = ['Subscription', 'subscription'];
-    const userIdColumns = ['userId', 'user_id'];
+    console.log('[hasActiveAccessEdge] Querying Subscription table with userId:', userId);
     
-    console.log('[hasActiveAccessEdge] Attempting to find subscription with:');
-    console.log('[hasActiveAccessEdge] Table names to try:', tableNames);
-    console.log('[hasActiveAccessEdge] User ID columns to try:', userIdColumns);
-    console.log('[hasActiveAccessEdge] User ID:', userId);
-    
-    for (const tableName of tableNames) {
-      for (const userIdCol of userIdColumns) {
-        try {
-          console.log(`[hasActiveAccessEdge] 🔍 Trying table: "${tableName}", column: "${userIdCol}"`);
-          
-          const result = await queryClient
-            .from(tableName)
-            .select('*')
-            .eq(userIdCol, userId)
-            .maybeSingle();
-          
-          console.log(`[hasActiveAccessEdge] Query result for "${tableName}"/"${userIdCol}":`, {
-            hasData: !!result.data,
-            hasError: !!result.error,
-            errorCode: result.error?.code,
-            errorMessage: result.error?.message,
-          });
-          
-          if (result.data && !result.error) {
-            subscription = result.data;
-            console.log(`[hasActiveAccessEdge] ✅✅✅ FOUND SUBSCRIPTION ✅✅✅`);
-            console.log(`[hasActiveAccessEdge] Table: "${tableName}", Column: "${userIdCol}"`);
-            console.log(`[hasActiveAccessEdge] Subscription ID:`, subscription.id);
-            break;
-          }
-          
-          if (result.error) {
-            // Log all errors for debugging
-            console.log(`[hasActiveAccessEdge] ❌ Query error for "${tableName}"/"${userIdCol}":`, {
-              code: result.error.code,
-              message: result.error.message,
-              details: result.error.details,
-              hint: result.error.hint,
-            });
-            
-            // PGRST116 is "not found" which is expected, other errors are real issues
-            if (result.error.code !== 'PGRST116') {
-              error = result.error;
-            }
-          }
-        } catch (err: any) {
-          console.error(`[hasActiveAccessEdge] ❌ Exception for "${tableName}"/"${userIdCol}":`, {
-            message: err.message,
-            stack: err.stack,
-          });
-          error = err;
-        }
-      }
+    try {
+      const result = await queryClient
+        .from('Subscription')
+        .select('*')
+        .eq('userId', userId)
+        .maybeSingle();
       
-      if (subscription) break;
-    }
-    
-    // If still not found, try using OR query (handles both column names)
-    if (!subscription) {
-      console.log('[hasActiveAccessEdge] ⚠️ Standard queries failed, trying OR query...');
-      for (const tableName of tableNames) {
-        try {
-          const result = await queryClient
-            .from(tableName)
-            .select('*')
-            .or(`userId.eq.${userId},user_id.eq.${userId}`)
-            .maybeSingle();
-          
-          console.log(`[hasActiveAccessEdge] OR query result for "${tableName}":`, {
-            hasData: !!result.data,
-            hasError: !!result.error,
-            errorCode: result.error?.code,
-            errorMessage: result.error?.message,
-          });
-          
-          if (result.data && !result.error) {
-            subscription = result.data;
-            console.log(`[hasActiveAccessEdge] ✅✅✅ FOUND SUBSCRIPTION VIA OR QUERY ✅✅✅`);
-            console.log(`[hasActiveAccessEdge] Table: "${tableName}"`);
-            break;
-          }
-        } catch (err: any) {
-          console.error(`[hasActiveAccessEdge] ❌ OR query exception for "${tableName}":`, err.message);
-        }
-      }
-    }
-
-    // If still no subscription, try direct SQL query as last resort
-    if (!subscription && supabaseServiceKey) {
-      try {
-        console.log('[hasActiveAccessEdge] Trying direct SQL query...');
-        const { data, error: sqlError } = await queryClient.rpc('get_user_subscription', {
-          user_id: userId
+      console.log('[hasActiveAccessEdge] Query result:', {
+        hasData: !!result.data,
+        hasError: !!result.error,
+        errorCode: result.error?.code,
+        errorMessage: result.error?.message,
+      });
+      
+      if (result.data && !result.error) {
+        subscription = result.data;
+        console.log('[hasActiveAccessEdge] ✅✅✅ FOUND SUBSCRIPTION ✅✅✅');
+        console.log('[hasActiveAccessEdge] Subscription ID:', subscription.id);
+      } else if (result.error && result.error.code !== 'PGRST116') {
+        // PGRST116 is "not found" which is expected, other errors are real issues
+        console.error('[hasActiveAccessEdge] ❌ Query error:', {
+          code: result.error.code,
+          message: result.error.message,
+          details: result.error.details,
+          hint: result.error.hint,
         });
-        
-        if (!sqlError && data) {
-          subscription = data;
-          console.log('[hasActiveAccessEdge] ✅ Found subscription via RPC');
-        }
-      } catch (rpcError) {
-        console.log('[hasActiveAccessEdge] RPC query failed (this is OK if function doesn\'t exist)');
       }
+    } catch (err: any) {
+      console.error('[hasActiveAccessEdge] ❌ Exception:', {
+        message: err.message,
+        stack: err.stack,
+      });
     }
 
     if (!subscription) {
@@ -283,25 +177,17 @@ export async function hasActiveAccessEdge(
 
     console.log('[hasActiveAccessEdge] Subscription found:', {
       id: subscription.id,
-      userId: subscription.userId || subscription.user_id,
-      status: subscription.subscriptionStatus || subscription.subscription_status,
-      trialEnd: subscription.trialEnd || subscription.trial_end,
-      currentPeriodEnd: subscription.currentPeriodEnd || subscription.current_period_end,
+      userId: subscription.userId,
+      status: subscription.subscriptionStatus,
+      trialEnd: subscription.trialEnd,
+      currentPeriodEnd: subscription.currentPeriodEnd,
     });
 
     const now = new Date();
-    // Handle both camelCase and snake_case column names
-    const trialEnd = subscription.trialEnd 
-      ? new Date(subscription.trialEnd) 
-      : subscription.trial_end 
-        ? new Date(subscription.trial_end) 
-        : null;
-    const currentPeriodEnd = subscription.currentPeriodEnd 
-      ? new Date(subscription.currentPeriodEnd) 
-      : subscription.current_period_end
-        ? new Date(subscription.current_period_end)
-        : null;
-    const subscriptionStatus = subscription.subscriptionStatus || subscription.subscription_status || '';
+    // Prisma creates camelCase columns, use exact names
+    const trialEnd = subscription.trialEnd ? new Date(subscription.trialEnd) : null;
+    const currentPeriodEnd = subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd) : null;
+    const subscriptionStatus = subscription.subscriptionStatus || '';
 
     console.log('[hasActiveAccessEdge] Checking access for user:', userId, {
       status: subscriptionStatus,

@@ -181,6 +181,18 @@ async function updateSubscriptionFromStripe(
   stripeSubscription: Stripe.Subscription,
   plan?: string
 ) {
+  // Ensure User exists first (required for Subscription foreign key)
+  await prisma.user.upsert({
+    where: { id: userId },
+    create: {
+      id: userId,
+      email: typeof stripeSubscription.customer === 'string' 
+        ? null 
+        : stripeSubscription.customer?.email || null,
+    },
+    update: {},
+  });
+
   const priceId = stripeSubscription.items.data[0]?.price.id;
   const productId = stripeSubscription.items.data[0]?.price.product as string;
 

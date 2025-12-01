@@ -220,13 +220,51 @@ export async function middleware(request: NextRequest) {
     
     let hasAccess = await hasActiveAccessEdge(supabase, user.id)
     
-    console.log('[Middleware] Access check result:', hasAccess);
+    console.log('[Middleware] Access check result (Supabase):', hasAccess);
     console.log('[Middleware] Has Access:', hasAccess ? 'YES ✅' : 'NO ❌');
     
-    // If no access, check if we need to initialize trial
+    // FALLBACK: If Supabase query failed, try using Prisma via API
+    // This handles cases where Supabase query fails but subscription exists in Prisma
+    if (!hasAccess) {
+      console.log('[Middleware] ⚠️ Supabase query returned no access, trying Prisma fallback...');
+      
+      try {
+        // Call the subscription status API which uses Prisma
+        const baseUrl = request.nextUrl.origin;
+        const statusResponse = await fetch(`${baseUrl}/api/subscription/status`, {
+          method: 'GET',
+          headers: {
+            'Cookie': request.headers.get('cookie') || '',
+          },
+        });
+        
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          console.log('[Middleware] Prisma fallback status data:', JSON.stringify(statusData, null, 2));
+          
+          // Check if user has active trial or subscription
+          if (statusData.isTrial && statusData.daysRemaining && statusData.daysRemaining > 0) {
+            console.log('[Middleware] ✅✅✅ PRISMA FALLBACK: ACTIVE TRIAL FOUND ✅✅✅');
+            console.log('[Middleware] Days remaining:', statusData.daysRemaining);
+            hasAccess = true;
+          } else if (statusData.isActive) {
+            console.log('[Middleware] ✅✅✅ PRISMA FALLBACK: ACTIVE SUBSCRIPTION FOUND ✅✅✅');
+            hasAccess = true;
+          } else {
+            console.log('[Middleware] ❌ Prisma fallback: No active access');
+          }
+        } else {
+          console.log('[Middleware] ⚠️ Prisma fallback API call failed:', statusResponse.status);
+        }
+      } catch (fallbackError: any) {
+        console.error('[Middleware] ❌ Error in Prisma fallback:', fallbackError.message);
+      }
+    }
+    
+    // If still no access, check if we need to initialize trial
     // This handles the case where user just signed up but trial wasn't created yet
     if (!hasAccess) {
-      console.log('[Middleware] ❌❌❌ NO ACCESS DETECTED ❌❌❌');
+      console.log('[Middleware] ❌❌❌ NO ACCESS DETECTED (after fallback) ❌❌❌');
       console.log('[Middleware] Checking if trial needs initialization...')
       
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -241,26 +279,21 @@ export async function middleware(request: NextRequest) {
           }
         })
         
-        // Check if subscription exists at all
-        const tableNames = ['Subscription', 'subscription']
+        // Check if subscription exists (use exact Prisma table/column names)
         let subscriptionExists = false
-        
-        for (const tableName of tableNames) {
-          try {
-            const { data, error } = await serviceClient
-              .from(tableName)
-              .select('id')
-              .or(`userId.eq.${user.id},user_id.eq.${user.id}`)
-              .maybeSingle()
-            
-            if (data && !error) {
-              subscriptionExists = true
-              console.log(`[Middleware] ✅ Subscription exists in "${tableName}"`)
-              break
-            }
-          } catch (err: any) {
-            console.log(`[Middleware] Error checking "${tableName}":`, err.message)
+        try {
+          const { data, error } = await serviceClient
+            .from('Subscription')
+            .select('id')
+            .eq('userId', user.id)
+            .maybeSingle()
+          
+          if (data && !error) {
+            subscriptionExists = true
+            console.log('[Middleware] ✅ Subscription exists')
           }
+        } catch (err: any) {
+          console.log('[Middleware] Error checking subscription:', err.message)
         }
         
         // If no subscription exists, try to initialize trial via API

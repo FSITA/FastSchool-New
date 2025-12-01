@@ -143,10 +143,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) {
       return { error: new Error('Authentication not configured') }
     }
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     })
+    
+    // Initialize trial for new users (same as Google OAuth flow)
+    if (!error && data.user) {
+      try {
+        console.log('[AuthContext] Initializing trial for new user:', data.user.id)
+        const trialResponse = await fetch('/api/subscription/initialize-trial', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: data.user.id }),
+        })
+        
+        if (!trialResponse.ok) {
+          console.error('[AuthContext] Failed to initialize trial:', await trialResponse.text())
+        } else {
+          console.log('[AuthContext] Trial initialized successfully')
+        }
+      } catch (trialError) {
+        console.error('[AuthContext] Error initializing trial:', trialError)
+        // Don't fail signup if trial init fails - it can be retried later
+      }
+    }
+    
     return { error: error as Error | null }
   }
 
