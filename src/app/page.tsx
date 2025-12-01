@@ -491,7 +491,7 @@ export default function Home() {
                 controls={false}
               >
                 <source 
-                  src="/homepage%20data/homepage-video.mp4" 
+                  src="https://mofboditnsbvidtrepah.supabase.co/storage/v1/object/public/Videos/homepage-video.mp4" 
                   type="video/mp4" 
                 />
                 Your browser does not support the video tag.
@@ -513,7 +513,7 @@ export default function Home() {
               className="h-12 w-auto"
             />
             <p className="text-center text-sm font-medium text-[#5F5F6A] md:text-base">
-            Trusted by more than 4 Million students, teachers and lifelong learners worldwide
+            Fidato da più di 4 milioni di studenti, insegnanti e studenti di tutte le età in tutto il mondo
             </p>
           </div>
         </section>
@@ -521,7 +521,7 @@ export default function Home() {
         <section className="mx-auto w-full max-w-6xl px-6 pb-24">
           <div className="mt-14 text-center">
             <p className="text-base font-semibold uppercase tracking-[0.4em] text-[#7A7A7A]">
-              Benefits
+              Vantaggi
             </p>
             <h2 className="mt-3 text-[2.5rem] font-bold text-[#1A1A1A] md:text-[4rem]">Perché scegliere FastSchool?</h2>
           </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/client';
 import { prisma } from '@/lib/prisma';
+import { env } from '@/env';
 import Stripe from 'stripe';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -198,7 +199,8 @@ async function updateSubscriptionFromStripe(
 
   // Determine plan from product ID if not provided
   if (!plan) {
-    plan = productId === 'prod_TVkIk1he6GaRpZ' ? 'monthly' : 'yearly';
+    const monthlyProductId = env.STRIPE_PRODUCT_MONTHLY || 'prod_TVkIk1he6GaRpZ';
+    plan = productId === monthlyProductId ? 'monthly' : 'yearly';
   }
 
   await prisma.subscription.upsert({

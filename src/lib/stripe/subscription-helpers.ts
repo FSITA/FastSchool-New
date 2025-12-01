@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma';
+import { env } from '@/env';
 
 export const STRIPE_PRODUCTS = {
-  MONTHLY: 'prod_TVkIk1he6GaRpZ',
-  YEARLY: 'prod_TVkISAXJLCD3Q4',
+  MONTHLY: env.STRIPE_PRODUCT_MONTHLY || 'prod_TVkIk1he6GaRpZ', // Fallback to test ID if not set
+  YEARLY: env.STRIPE_PRODUCT_YEARLY || 'prod_TVkISAXJLCD3Q4', // Fallback to test ID if not set
 } as const;
 
 /**
