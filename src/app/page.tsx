@@ -276,6 +276,14 @@ export default function Home() {
     const featuredTools = dashboardTools.filter(tool => tool.featured);
     const allTools = dashboardTools.filter(tool => !tool.featured);
 
+    console.log('[Dashboard] ========== DASHBOARD RENDERED ==========');
+    console.log('[Dashboard] User ID:', user.id);
+    console.log('[Dashboard] User Email:', user.email);
+    console.log('[Dashboard] Timestamp:', new Date().toISOString());
+    console.log('[Dashboard] Featured Tools:', featuredTools.length);
+    console.log('[Dashboard] All Tools:', allTools.length);
+    console.log('[Dashboard] =========================================');
+
   return (
       <div className="min-h-screen bg-white">
         {/* Header */}

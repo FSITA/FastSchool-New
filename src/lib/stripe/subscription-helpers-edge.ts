@@ -165,13 +165,19 @@ export async function hasActiveAccessEdge(
     let error = null;
     
     // Try different table name variations
+    // Prisma creates tables with exact model name (capitalized) and columns as defined
     const tableNames = ['Subscription', 'subscription'];
-    const userIdColumns = ['userId', 'user_id', 'userId'];
+    const userIdColumns = ['userId', 'user_id'];
+    
+    console.log('[hasActiveAccessEdge] Attempting to find subscription with:');
+    console.log('[hasActiveAccessEdge] Table names to try:', tableNames);
+    console.log('[hasActiveAccessEdge] User ID columns to try:', userIdColumns);
+    console.log('[hasActiveAccessEdge] User ID:', userId);
     
     for (const tableName of tableNames) {
       for (const userIdCol of userIdColumns) {
         try {
-          console.log(`[hasActiveAccessEdge] Trying table: "${tableName}", column: "${userIdCol}"`);
+          console.log(`[hasActiveAccessEdge] 🔍 Trying table: "${tableName}", column: "${userIdCol}"`);
           
           const result = await queryClient
             .from(tableName)
@@ -179,24 +185,75 @@ export async function hasActiveAccessEdge(
             .eq(userIdCol, userId)
             .maybeSingle();
           
+          console.log(`[hasActiveAccessEdge] Query result for "${tableName}"/"${userIdCol}":`, {
+            hasData: !!result.data,
+            hasError: !!result.error,
+            errorCode: result.error?.code,
+            errorMessage: result.error?.message,
+          });
+          
           if (result.data && !result.error) {
             subscription = result.data;
-            console.log(`[hasActiveAccessEdge] ✅ Found subscription using table "${tableName}" and column "${userIdCol}"`);
+            console.log(`[hasActiveAccessEdge] ✅✅✅ FOUND SUBSCRIPTION ✅✅✅`);
+            console.log(`[hasActiveAccessEdge] Table: "${tableName}", Column: "${userIdCol}"`);
+            console.log(`[hasActiveAccessEdge] Subscription ID:`, subscription.id);
             break;
           }
           
-          if (result.error && result.error.code !== 'PGRST116') {
+          if (result.error) {
+            // Log all errors for debugging
+            console.log(`[hasActiveAccessEdge] ❌ Query error for "${tableName}"/"${userIdCol}":`, {
+              code: result.error.code,
+              message: result.error.message,
+              details: result.error.details,
+              hint: result.error.hint,
+            });
+            
             // PGRST116 is "not found" which is expected, other errors are real issues
-            error = result.error;
-            console.log(`[hasActiveAccessEdge] Query error for "${tableName}"/"${userIdCol}":`, result.error);
+            if (result.error.code !== 'PGRST116') {
+              error = result.error;
+            }
           }
         } catch (err: any) {
-          console.log(`[hasActiveAccessEdge] Exception for "${tableName}"/"${userIdCol}":`, err.message);
+          console.error(`[hasActiveAccessEdge] ❌ Exception for "${tableName}"/"${userIdCol}":`, {
+            message: err.message,
+            stack: err.stack,
+          });
           error = err;
         }
       }
       
       if (subscription) break;
+    }
+    
+    // If still not found, try using OR query (handles both column names)
+    if (!subscription) {
+      console.log('[hasActiveAccessEdge] ⚠️ Standard queries failed, trying OR query...');
+      for (const tableName of tableNames) {
+        try {
+          const result = await queryClient
+            .from(tableName)
+            .select('*')
+            .or(`userId.eq.${userId},user_id.eq.${userId}`)
+            .maybeSingle();
+          
+          console.log(`[hasActiveAccessEdge] OR query result for "${tableName}":`, {
+            hasData: !!result.data,
+            hasError: !!result.error,
+            errorCode: result.error?.code,
+            errorMessage: result.error?.message,
+          });
+          
+          if (result.data && !result.error) {
+            subscription = result.data;
+            console.log(`[hasActiveAccessEdge] ✅✅✅ FOUND SUBSCRIPTION VIA OR QUERY ✅✅✅`);
+            console.log(`[hasActiveAccessEdge] Table: "${tableName}"`);
+            break;
+          }
+        } catch (err: any) {
+          console.error(`[hasActiveAccessEdge] ❌ OR query exception for "${tableName}":`, err.message);
+        }
+      }
     }
 
     // If still no subscription, try direct SQL query as last resort

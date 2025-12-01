@@ -214,12 +214,20 @@ export async function middleware(request: NextRequest) {
 
   // Check subscription access for authenticated user
   try {
+    console.log('[Middleware] ========== CHECKING SUBSCRIPTION ACCESS ==========');
+    console.log('[Middleware] User ID:', user.id);
+    console.log('[Middleware] Calling hasActiveAccessEdge...');
+    
     let hasAccess = await hasActiveAccessEdge(supabase, user.id)
+    
+    console.log('[Middleware] Access check result:', hasAccess);
+    console.log('[Middleware] Has Access:', hasAccess ? 'YES ✅' : 'NO ❌');
     
     // If no access, check if we need to initialize trial
     // This handles the case where user just signed up but trial wasn't created yet
     if (!hasAccess) {
-      console.log('[Middleware] No access found, checking if trial needs initialization...')
+      console.log('[Middleware] ❌❌❌ NO ACCESS DETECTED ❌❌❌');
+      console.log('[Middleware] Checking if trial needs initialization...')
       
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -296,13 +304,19 @@ export async function middleware(request: NextRequest) {
 
     if (!hasAccess) {
       // Redirect to pricing page
-      console.log('[Middleware] ❌ No access, redirecting to pricing')
+      console.log('[Middleware] ❌❌❌ FINAL DECISION: NO ACCESS ❌❌❌');
+      console.log('[Middleware] Redirecting to pricing page');
+      console.log('[Middleware] Original pathname:', pathname);
+      console.log('[Middleware] User ID:', user.id);
+      console.log('[Middleware] ============================================');
       const url = request.nextUrl.clone()
       url.pathname = '/pricing'
       return NextResponse.redirect(url)
     }
     
-    console.log('[Middleware] ✅ Access granted')
+    console.log('[Middleware] ✅✅✅ FINAL DECISION: ACCESS GRANTED ✅✅✅');
+    console.log('[Middleware] Allowing access to:', pathname);
+    console.log('[Middleware] ============================================');
   } catch (error) {
     console.error('[Middleware] Error checking subscription access:', error)
     console.error('[Middleware] Error details:', error instanceof Error ? {
