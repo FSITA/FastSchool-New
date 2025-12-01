@@ -121,7 +121,12 @@ export default function AuthCallbackPage() {
             // Initialize trial for new users
             if (data.session.user) {
               try {
-                console.log('[AuthCallback] Initializing trial for user:', data.session.user.id);
+                console.log('[AuthCallback] ========== TRIAL INITIALIZATION START ==========');
+                console.log('[AuthCallback] User ID:', data.session.user.id);
+                console.log('[AuthCallback] User Email:', data.session.user.email);
+                console.log('[AuthCallback] Timestamp:', new Date().toISOString());
+                console.log('[AuthCallback] Calling /api/subscription/initialize-trial...');
+                
                 const trialResponse = await fetch('/api/subscription/initialize-trial', {
                   method: 'POST',
                   headers: {
@@ -130,19 +135,35 @@ export default function AuthCallbackPage() {
                   body: JSON.stringify({ userId: data.session.user.id }),
                 });
                 
+                console.log('[AuthCallback] Trial API Response Status:', trialResponse.status);
+                console.log('[AuthCallback] Trial API Response OK:', trialResponse.ok);
+                
                 if (!trialResponse.ok) {
                   const errorData = await trialResponse.json();
-                  console.error('[AuthCallback] ❌ Failed to initialize trial:', errorData);
+                  console.error('[AuthCallback] ❌❌❌ FAILED TO INITIALIZE TRIAL ❌❌❌');
+                  console.error('[AuthCallback] Error Status:', trialResponse.status);
+                  console.error('[AuthCallback] Error Data:', JSON.stringify(errorData, null, 2));
                 } else {
                   const trialData = await trialResponse.json();
-                  console.log('[AuthCallback] ✅ Trial initialized successfully:', trialData);
+                  console.log('[AuthCallback] ✅✅✅ TRIAL INITIALIZED SUCCESSFULLY ✅✅✅');
+                  console.log('[AuthCallback] Trial Data:', JSON.stringify(trialData, null, 2));
+                  console.log('[AuthCallback] ========== TRIAL INITIALIZATION END ==========');
                 }
-              } catch (error) {
-                console.error('[AuthCallback] ❌ Error initializing trial:', error);
+              } catch (error: any) {
+                console.error('[AuthCallback] ❌❌❌ ERROR INITIALIZING TRIAL ❌❌❌');
+                console.error('[AuthCallback] Error Type:', typeof error);
+                console.error('[AuthCallback] Error Message:', error?.message);
+                console.error('[AuthCallback] Error Stack:', error?.stack);
+                console.error('[AuthCallback] Full Error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
               }
             }
             
             // Session stored successfully, redirect to intended page
+            console.log('[AuthCallback] ========== REDIRECTING USER ==========');
+            console.log('[AuthCallback] Redirect Target:', next);
+            console.log('[AuthCallback] User ID:', data.session.user?.id);
+            console.log('[AuthCallback] User Email:', data.session.user?.email);
+            console.log('[AuthCallback] ========================================');
             router.replace(next)
             return
           }
@@ -174,7 +195,13 @@ export default function AuthCallbackPage() {
               // Initialize trial for new users (only on SIGNED_IN, not INITIAL_SESSION)
               if (event === 'SIGNED_IN' && session.user) {
                 try {
-                  console.log('[AuthCallback] Initializing trial for user (SIGNED_IN event):', session.user.id);
+                  console.log('[AuthCallback] ========== TRIAL INITIALIZATION START (SIGNED_IN) ==========');
+                  console.log('[AuthCallback] Event:', event);
+                  console.log('[AuthCallback] User ID:', session.user.id);
+                  console.log('[AuthCallback] User Email:', session.user.email);
+                  console.log('[AuthCallback] Timestamp:', new Date().toISOString());
+                  console.log('[AuthCallback] Calling /api/subscription/initialize-trial...');
+                  
                   const trialResponse = await fetch('/api/subscription/initialize-trial', {
                     method: 'POST',
                     headers: {
@@ -183,19 +210,35 @@ export default function AuthCallbackPage() {
                     body: JSON.stringify({ userId: session.user.id }),
                   });
                   
+                  console.log('[AuthCallback] Trial API Response Status:', trialResponse.status);
+                  console.log('[AuthCallback] Trial API Response OK:', trialResponse.ok);
+                  
                   if (!trialResponse.ok) {
                     const errorData = await trialResponse.json();
-                    console.error('[AuthCallback] ❌ Failed to initialize trial:', errorData);
+                    console.error('[AuthCallback] ❌❌❌ FAILED TO INITIALIZE TRIAL ❌❌❌');
+                    console.error('[AuthCallback] Error Status:', trialResponse.status);
+                    console.error('[AuthCallback] Error Data:', JSON.stringify(errorData, null, 2));
                   } else {
                     const trialData = await trialResponse.json();
-                    console.log('[AuthCallback] ✅ Trial initialized successfully:', trialData);
+                    console.log('[AuthCallback] ✅✅✅ TRIAL INITIALIZED SUCCESSFULLY ✅✅✅');
+                    console.log('[AuthCallback] Trial Data:', JSON.stringify(trialData, null, 2));
+                    console.log('[AuthCallback] ========== TRIAL INITIALIZATION END ==========');
                   }
-                } catch (error) {
-                  console.error('[AuthCallback] ❌ Error initializing trial:', error);
+                } catch (error: any) {
+                  console.error('[AuthCallback] ❌❌❌ ERROR INITIALIZING TRIAL ❌❌❌');
+                  console.error('[AuthCallback] Error Type:', typeof error);
+                  console.error('[AuthCallback] Error Message:', error?.message);
+                  console.error('[AuthCallback] Error Stack:', error?.stack);
+                  console.error('[AuthCallback] Full Error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
                 }
               }
             }
             
+            console.log('[AuthCallback] ========== REDIRECTING USER (SIGNED_IN) ==========');
+            console.log('[AuthCallback] Redirect Target:', next);
+            console.log('[AuthCallback] User ID:', session?.user?.id);
+            console.log('[AuthCallback] User Email:', session?.user?.email);
+            console.log('[AuthCallback] ====================================================');
             router.replace(next)
           }
         })

@@ -61,14 +61,24 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Initialize trial
     console.log('[INITIALIZE-TRIAL API] Step 3: Calling initializeTrial...');
+    console.log('[INITIALIZE-TRIAL API] User ID:', userId);
+    console.log('[INITIALIZE-TRIAL API] Timestamp:', new Date().toISOString());
+    
     const subscription = await initializeTrial(userId);
     
     console.log('[INITIALIZE-TRIAL API] ✅✅✅ TRIAL INITIALIZED SUCCESSFULLY ✅✅✅');
-    console.log('[INITIALIZE-TRIAL API] Subscription result:', {
+    console.log('[INITIALIZE-TRIAL API] Subscription ID:', subscription.id);
+    console.log('[INITIALIZE-TRIAL API] Subscription Status:', subscription.subscriptionStatus);
+    console.log('[INITIALIZE-TRIAL API] Trial Start:', subscription.trialStart?.toISOString());
+    console.log('[INITIALIZE-TRIAL API] Trial End:', subscription.trialEnd?.toISOString());
+    console.log('[INITIALIZE-TRIAL API] Full Subscription:', JSON.stringify({
       id: subscription.id,
+      userId: subscription.userId,
       status: subscription.subscriptionStatus,
+      trialStart: subscription.trialStart?.toISOString(),
       trialEnd: subscription.trialEnd?.toISOString(),
-    });
+    }, null, 2));
+    console.log('[INITIALIZE-TRIAL API] ============================================');
 
     return NextResponse.json({ 
       success: true,

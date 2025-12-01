@@ -30,7 +30,11 @@ const PUBLIC_ROUTES = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
-  console.log('[Middleware] ===== MIDDLEWARE CALLED =====', pathname)
+  console.log('[Middleware] ========== MIDDLEWARE CALLED ==========');
+  console.log('[Middleware] Pathname:', pathname);
+  console.log('[Middleware] Method:', request.method);
+  console.log('[Middleware] Timestamp:', new Date().toISOString());
+  console.log('[Middleware] URL:', request.url);
 
   // Check route types
   const isProtectedRoute = PROTECTED_AI_ROUTES.some(route => 
@@ -195,24 +199,116 @@ export async function middleware(request: NextRequest) {
 
   // If not logged in, redirect to login
   if (!user) {
+    console.log('[Middleware] ❌ User not authenticated');
+    console.log('[Middleware] Redirecting to login page');
+    console.log('[Middleware] Redirect target (after login):', pathname);
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     url.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(url)
   }
+  
+  console.log('[Middleware] ✅ User authenticated');
+  console.log('[Middleware] User ID:', user.id);
+  console.log('[Middleware] User Email:', user.email);
 
   // Check subscription access for authenticated user
   try {
-    const hasAccess = await hasActiveAccessEdge(supabase, user.id)
+    let hasAccess = await hasActiveAccessEdge(supabase, user.id)
+    
+    // If no access, check if we need to initialize trial
+    // This handles the case where user just signed up but trial wasn't created yet
+    if (!hasAccess) {
+      console.log('[Middleware] No access found, checking if trial needs initialization...')
+      
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      
+      if (supabaseUrl && supabaseServiceKey) {
+        const { createClient } = await import('@supabase/supabase-js')
+        const serviceClient = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        })
+        
+        // Check if subscription exists at all
+        const tableNames = ['Subscription', 'subscription']
+        let subscriptionExists = false
+        
+        for (const tableName of tableNames) {
+          try {
+            const { data, error } = await serviceClient
+              .from(tableName)
+              .select('id')
+              .or(`userId.eq.${user.id},user_id.eq.${user.id}`)
+              .maybeSingle()
+            
+            if (data && !error) {
+              subscriptionExists = true
+              console.log(`[Middleware] ✅ Subscription exists in "${tableName}"`)
+              break
+            }
+          } catch (err: any) {
+            console.log(`[Middleware] Error checking "${tableName}":`, err.message)
+          }
+        }
+        
+        // If no subscription exists, try to initialize trial via API
+        // We use the API route instead of direct DB write to ensure User exists in Prisma
+        if (!subscriptionExists) {
+          console.log('[Middleware] No subscription found, attempting to initialize trial via API...')
+          
+          try {
+            // Create a request to the initialize-trial API
+            const baseUrl = request.nextUrl.origin
+            const initResponse = await fetch(`${baseUrl}/api/subscription/initialize-trial`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Cookie': request.headers.get('cookie') || '',
+              },
+              body: JSON.stringify({ userId: user.id }),
+            })
+            
+            if (initResponse.ok) {
+              console.log('[Middleware] ✅ Trial initialization API call succeeded')
+              // Wait a moment for database to sync
+              await new Promise(resolve => setTimeout(resolve, 200))
+              // Recheck access
+              hasAccess = await hasActiveAccessEdge(supabase, user.id)
+              if (hasAccess) {
+                console.log('[Middleware] ✅ Access granted after trial initialization')
+              }
+            } else {
+              const errorData = await initResponse.json().catch(() => ({}))
+              console.error('[Middleware] ❌ Trial initialization API failed:', errorData)
+            }
+          } catch (apiError: any) {
+            console.error('[Middleware] ❌ Error calling trial initialization API:', apiError.message)
+          }
+        } else {
+          console.log('[Middleware] Subscription exists but access denied - likely expired or inactive')
+        }
+      }
+    }
 
     if (!hasAccess) {
       // Redirect to pricing page
+      console.log('[Middleware] ❌ No access, redirecting to pricing')
       const url = request.nextUrl.clone()
       url.pathname = '/pricing'
       return NextResponse.redirect(url)
     }
+    
+    console.log('[Middleware] ✅ Access granted')
   } catch (error) {
     console.error('[Middleware] Error checking subscription access:', error)
+    console.error('[Middleware] Error details:', error instanceof Error ? {
+      message: error.message,
+      stack: error.stack
+    } : error)
     // On error, deny access (fail closed)
     const url = request.nextUrl.clone()
     url.pathname = '/pricing'

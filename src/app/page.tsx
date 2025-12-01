@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ToolCard } from '@/components/ui/ToolCard';
 import { UserMenu } from '@/components/user/UserMenu';
-import { TrialStatusBanner } from '@/components/shared/TrialStatusBanner';
+import { TrialStatusButton } from '@/components/shared/TrialStatusButton';
 import Header from '../components/shared/Header';
 import FAQSection from '../components/shared/FAQSection';
 import CTASection from '../components/shared/CTASection';
@@ -62,11 +62,11 @@ const toolLinks = [
 ];
 
 const heroWords = [
-  { label: 'Mappe Mentali', color: '#FEE091' },
-  { label: 'Flashcard', color: '#B9D2FF' },
-  { label: 'Presentazioni AI', color: '#FFB1B1' },
   { label: 'Quiz', color: '#C8F3D2' },
-  { label: 'Pianificatore di Lezioni', color: '#FFD4A8' },
+  { label: 'Presentazioni', color: '#FFB1B1' },
+  { label: 'Lezioni', color: '#FFD4A8' },
+  { label: 'FlashCard', color: '#B9D2FF' },
+  { label: 'Riassunti', color: '#FEE091' },
 ];
 
 const benefitLeftCards = [
@@ -278,9 +278,6 @@ export default function Home() {
 
   return (
       <div className="min-h-screen bg-white">
-        {/* Trial Status Banner */}
-        <TrialStatusBanner />
-        
         {/* Header */}
         <header className="border-b border-gray-200 bg-white">
           <div className="max-w-6xl mx-auto px-6 py-4">
@@ -341,7 +338,10 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
-              <UserMenu />
+              <div className="flex items-center gap-3">
+                <TrialStatusButton />
+                <UserMenu />
+              </div>
             </div>
           </div>
         </header>

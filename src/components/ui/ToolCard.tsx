@@ -171,9 +171,19 @@ export function ToolCard({
     )
   }
 
+  const handleClick = () => {
+    console.log('[ToolCard] ========== AI TOOL CARD CLICKED ==========');
+    console.log('[ToolCard] Tool Name:', title);
+    console.log('[ToolCard] Tool Href:', href);
+    console.log('[ToolCard] Timestamp:', new Date().toISOString());
+    console.log('[ToolCard] User is navigating to AI page...');
+    console.log('[ToolCard] ===========================================');
+  }
+
   return (
     <Link 
       href={href} 
+      onClick={handleClick}
       className="block relative focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0E85F2] focus-visible:ring-offset-2 rounded-[18px]"
     >
       {cardContent}
