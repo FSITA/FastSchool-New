@@ -7,6 +7,35 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 import { uploadToSupabaseStorage } from "@/lib/supabase/storage";
+import { createClient } from "@/lib/supabase/server";
+
+// Helper function to ensure User exists in database
+async function ensureUserExists(userId: string, email?: string | null, name?: string | null) {
+  try {
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
+      // Create user if doesn't exist
+      await prisma.user.create({
+        data: {
+          id: userId,
+          email: email || null,
+          name: name || null,
+        },
+      });
+      console.log('[generateImageAction] Created User record:', userId);
+    }
+  } catch (error: any) {
+    // If user already exists (race condition), that's fine
+    if (error.code !== 'P2002') {
+      console.error('[generateImageAction] Error ensuring user exists:', error);
+      throw error;
+    }
+  }
+}
 
 // Define the image model list type
 export type ImageModelList = 
@@ -131,13 +160,30 @@ export async function generateImageAction(prompt: string) {
       console.log(`[LOG] Public URL for the image: ${permanentUrl}`);
     }
 
+    // Get authenticated user
+    const supabase = createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error('[generateImageAction] Authentication error:', authError);
+      return {
+        success: false,
+        error: "Authentication required",
+      };
+    }
+
+    const userId = user.id;
+
+    // Ensure User record exists in database
+    await ensureUserExists(userId, user.email, user.user_metadata?.name || user.email?.split('@')[0]);
+
     // Store the image metadata in the database
     console.log("[LOG] Storing image metadata in the database...");
     const savedImage = await prisma.generatedImage.create({
       data: {
         url: permanentUrl,
         prompt: prompt,
-        userId: "anonymous-user", // Using default user ID as per original logic
+        userId: userId,
       },
     });
     console.log(`[LOG] Database record created with ID: ${savedImage.id}`);

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
+import { install } from "@puppeteer/browsers";
+import { join } from "path";
+import { existsSync } from "fs";
 
 export async function POST(req: NextRequest) {
   let browser;
@@ -32,14 +35,92 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    // For Render.com, ensure we use the correct Chrome path
-    // Puppeteer should find it automatically after postinstall, but we can be explicit
-    if (process.env.RENDER) {
+    // Find Chrome executable path for Render.com
+    let chromePath: string | undefined;
+    
+    // Check environment variable first
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      chromePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      console.log("[PDF Export] Using Chrome from PUPPETEER_EXECUTABLE_PATH:", chromePath);
+    } else if (process.env.RENDER) {
       // On Render.com, Chrome is installed in the cache directory
-      const chromePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-      if (chromePath) {
-        puppeteerOptions.executablePath = chromePath;
+      const cacheDir = process.env.PUPPETEER_CACHE_DIR || "/opt/render/.cache/puppeteer";
+      console.log("[PDF Export] Looking for Chrome in Render cache directory:", cacheDir);
+      
+      // Try to find Chrome executable in the cache directory
+      // Puppeteer installs Chrome in: cacheDir/chrome/linux-*/chrome-linux/chrome
+      if (existsSync(cacheDir)) {
+        try {
+          const fs = await import("fs");
+          const { readdirSync, statSync } = fs;
+          
+          const chromeDir = join(cacheDir, "chrome");
+          if (existsSync(chromeDir)) {
+            const platforms = readdirSync(chromeDir);
+            for (const platform of platforms) {
+              const platformPath = join(chromeDir, platform);
+              if (statSync(platformPath).isDirectory()) {
+                // Try different possible paths
+                const possiblePaths = [
+                  join(platformPath, "chrome-linux", "chrome"),
+                  join(platformPath, "chrome", "chrome"),
+                  join(platformPath, "chrome"),
+                ];
+                
+                for (const possiblePath of possiblePaths) {
+                  if (existsSync(possiblePath)) {
+                    chromePath = possiblePath;
+                    console.log("[PDF Export] Found Chrome at:", chromePath);
+                    break;
+                  }
+                }
+                
+                if (chromePath) break;
+              }
+            }
+          }
+          
+          // If not found, try to install Chrome
+          if (!chromePath) {
+            console.log("[PDF Export] Chrome not found, attempting to install...");
+            try {
+              await install({
+                browser: "chrome",
+                cacheDir: cacheDir,
+              });
+              
+              // Try to find it again after installation
+              const chromeDir = join(cacheDir, "chrome");
+              if (existsSync(chromeDir)) {
+                const platforms = readdirSync(chromeDir);
+                for (const platform of platforms) {
+                  const platformPath = join(chromeDir, platform);
+                  if (statSync(platformPath).isDirectory()) {
+                    const chromeExecutable = join(platformPath, "chrome-linux", "chrome");
+                    if (existsSync(chromeExecutable)) {
+                      chromePath = chromeExecutable;
+                      console.log("[PDF Export] Chrome installed and found at:", chromePath);
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch (installError) {
+              console.error("[PDF Export] Failed to install Chrome:", installError);
+            }
+          }
+        } catch (err) {
+          console.error("[PDF Export] Error finding Chrome:", err);
+        }
       }
+    }
+    
+    // Set executable path if found
+    if (chromePath) {
+      puppeteerOptions.executablePath = chromePath;
+      console.log("[PDF Export] Using Chrome executable:", chromePath);
+    } else {
+      console.log("[PDF Export] Chrome executable path not set, Puppeteer will try to find it automatically");
     }
 
     browser = await puppeteer.launch(puppeteerOptions);
