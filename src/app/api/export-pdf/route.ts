@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
-import { install } from "@puppeteer/browsers";
 import { join } from "path";
 import { existsSync } from "fs";
 
@@ -35,7 +34,8 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    // Find Chrome executable path for Render.com
+    // Find Chrome executable path
+    // Chrome should be installed during build via postinstall script
     let chromePath: string | undefined;
     
     // Check environment variable first
@@ -43,170 +43,88 @@ export async function POST(req: NextRequest) {
       chromePath = process.env.PUPPETEER_EXECUTABLE_PATH;
       console.log("[PDF Export] Using Chrome from PUPPETEER_EXECUTABLE_PATH:", chromePath);
     } else {
-      // Determine cache directory
-      let cacheDir: string;
-      if (process.env.PUPPETEER_CACHE_DIR) {
-        cacheDir = process.env.PUPPETEER_CACHE_DIR;
-      } else if (process.env.RENDER) {
-        cacheDir = "/opt/render/.cache/puppeteer";
-      } else {
-        // Use Puppeteer's default cache directory
-        cacheDir = join(process.cwd(), ".cache", "puppeteer");
-      }
-      
-      console.log("[PDF Export] Using cache directory:", cacheDir);
-      
-      // Ensure cache directory exists
+      // Try to find Chrome in common locations
+      // Puppeteer installs Chrome during build, so it should be in node_modules or cache
       const fs = await import("fs");
-      const { mkdirSync, readdirSync, statSync } = fs;
+      const { readdirSync, statSync } = fs;
       
-      try {
-        if (!existsSync(cacheDir)) {
-          console.log("[PDF Export] Cache directory doesn't exist, creating it...");
-          mkdirSync(cacheDir, { recursive: true });
-        }
+      // Possible cache directories
+      const possibleCacheDirs = [
+        process.env.PUPPETEER_CACHE_DIR,
+        process.env.RENDER ? "/opt/render/.cache/puppeteer" : undefined,
+        join(process.cwd(), ".cache", "puppeteer"),
+        join(process.cwd(), "node_modules", ".cache", "puppeteer"),
+        join(process.env.HOME || process.env.USERPROFILE || "/tmp", ".cache", "puppeteer"),
+      ].filter(Boolean) as string[];
+      
+      console.log("[PDF Export] Searching for Chrome in cache directories:", possibleCacheDirs);
+      
+      for (const cacheDir of possibleCacheDirs) {
+        if (!existsSync(cacheDir)) continue;
         
-        // Set environment variable so Puppeteer uses this cache directory
-        process.env.PUPPETEER_CACHE_DIR = cacheDir;
-        
-        // Try to find Chrome executable in the cache directory
-        const chromeDir = join(cacheDir, "chrome");
-        if (existsSync(chromeDir)) {
-          console.log("[PDF Export] Chrome directory exists, searching for executable...");
+        try {
+          const chromeDir = join(cacheDir, "chrome");
+          if (!existsSync(chromeDir)) continue;
+          
           const platforms = readdirSync(chromeDir);
-          console.log("[PDF Export] Found platforms:", platforms);
+          console.log("[PDF Export] Found platforms in", chromeDir, ":", platforms);
           
           for (const platform of platforms) {
             const platformPath = join(chromeDir, platform);
-            if (statSync(platformPath).isDirectory()) {
-              // Try different possible paths
-              const possiblePaths = [
-                join(platformPath, "chrome-linux", "chrome"),
-                join(platformPath, "chrome", "chrome"),
-                join(platformPath, "chrome"),
-                join(platformPath, "chrome-headless-shell-linux", "chrome-headless-shell"),
-              ];
-              
-              for (const possiblePath of possiblePaths) {
-                if (existsSync(possiblePath)) {
-                  chromePath = possiblePath;
-                  console.log("[PDF Export] ✅ Found Chrome at:", chromePath);
-                  break;
-                }
-              }
-              
-              if (chromePath) break;
-            }
-          }
-        }
-        
-        // If not found, try to install Chrome
-        if (!chromePath) {
-          console.log("[PDF Export] Chrome not found, attempting to install...");
-          try {
-            console.log("[PDF Export] Installing Chrome to:", cacheDir);
-            const installInfo = await install({
-              browser: "chrome",
-              cacheDir: cacheDir,
-            });
-            console.log("[PDF Export] Chrome installation info:", installInfo);
+            if (!statSync(platformPath).isDirectory()) continue;
             
-            // Wait a moment for installation to complete
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Try different possible Chrome executable paths
+            const possiblePaths = [
+              join(platformPath, "chrome-linux", "chrome"),
+              join(platformPath, "chrome", "chrome"),
+              join(platformPath, "chrome"),
+              join(platformPath, "chrome-headless-shell-linux", "chrome-headless-shell"),
+            ];
             
-            // Try to find it again after installation
-            const chromeDir = join(cacheDir, "chrome");
-            if (existsSync(chromeDir)) {
-              const platforms = readdirSync(chromeDir);
-              console.log("[PDF Export] After installation, found platforms:", platforms);
-              
-              for (const platform of platforms) {
-                const platformPath = join(chromeDir, platform);
-                if (statSync(platformPath).isDirectory()) {
-                  const possiblePaths = [
-                    join(platformPath, "chrome-linux", "chrome"),
-                    join(platformPath, "chrome", "chrome"),
-                    join(platformPath, "chrome"),
-                  ];
-                  
-                  for (const possiblePath of possiblePaths) {
-                    if (existsSync(possiblePath)) {
-                      chromePath = possiblePath;
-                      console.log("[PDF Export] ✅ Chrome installed and found at:", chromePath);
-                      break;
-                    }
-                  }
-                  
-                  if (chromePath) break;
-                }
+            for (const possiblePath of possiblePaths) {
+              if (existsSync(possiblePath)) {
+                chromePath = possiblePath;
+                console.log("[PDF Export] ✅ Found Chrome at:", chromePath);
+                break;
               }
             }
-          } catch (installError: any) {
-            console.error("[PDF Export] ❌ Failed to install Chrome:", installError);
-            console.error("[PDF Export] Installation error details:", {
-              message: installError?.message,
-              stack: installError?.stack,
-            });
+            
+            if (chromePath) break;
           }
+          
+          if (chromePath) break;
+        } catch (err) {
+          // Continue searching other directories
+          console.log("[PDF Export] Error searching", cacheDir, ":", err);
         }
-      } catch (err: any) {
-        console.error("[PDF Export] ❌ Error finding Chrome:", err);
-        console.error("[PDF Export] Error details:", {
-          message: err?.message,
-          stack: err?.stack,
-        });
+      }
+      
+      // Set cache directory for Puppeteer if we found Chrome
+      if (chromePath && process.env.RENDER && !process.env.PUPPETEER_CACHE_DIR) {
+        // Extract cache dir from chrome path
+        const chromePathParts = chromePath.split("/");
+        const chromeIndex = chromePathParts.findIndex(p => p === "chrome");
+        if (chromeIndex > 0) {
+          const detectedCacheDir = chromePathParts.slice(0, chromeIndex - 1).join("/");
+          process.env.PUPPETEER_CACHE_DIR = detectedCacheDir;
+          console.log("[PDF Export] Set PUPPETEER_CACHE_DIR to:", detectedCacheDir);
+        }
       }
     }
     
     // Set executable path if found
-      if (chromePath) {
-        puppeteerOptions.executablePath = chromePath;
+    if (chromePath) {
+      puppeteerOptions.executablePath = chromePath;
       console.log("[PDF Export] ✅ Using Chrome executable:", chromePath);
     } else {
-      console.warn("[PDF Export] ⚠️ Chrome executable path not set, Puppeteer will try to find it automatically");
-      // Set cache directory for Puppeteer to use
-      if (process.env.PUPPETEER_CACHE_DIR) {
-        console.log("[PDF Export] PUPPETEER_CACHE_DIR is set to:", process.env.PUPPETEER_CACHE_DIR);
-      }
-    }
-
-    // Ensure cache directory is set for Puppeteer
-    if (process.env.RENDER && !process.env.PUPPETEER_CACHE_DIR) {
-      process.env.PUPPETEER_CACHE_DIR = "/opt/render/.cache/puppeteer";
+      console.log("[PDF Export] Chrome path not explicitly set, relying on Puppeteer's built-in detection");
+      // Don't set PUPPETEER_CACHE_DIR here - let Puppeteer use its defaults
+      // The postinstall script should have installed Chrome to Puppeteer's default location
     }
     
-    try {
-      browser = await puppeteer.launch(puppeteerOptions);
-    } catch (launchError: any) {
-      // If launch fails and we don't have an explicit path, try one more time with cache directory
-      if (!chromePath && process.env.RENDER) {
-        console.log("[PDF Export] Launch failed, trying with explicit cache directory setup...");
-        const cacheDir = "/opt/render/.cache/puppeteer";
-        process.env.PUPPETEER_CACHE_DIR = cacheDir;
-        
-        // Try to install Chrome one more time
-        try {
-          const fs = await import("fs");
-          const { mkdirSync } = fs;
-          if (!existsSync(cacheDir)) {
-            mkdirSync(cacheDir, { recursive: true });
-          }
-          
-          await install({
-            browser: "chrome",
-            cacheDir: cacheDir,
-          });
-          
-          console.log("[PDF Export] Chrome installed, retrying launch...");
+    // Launch browser - Puppeteer should find Chrome installed during build
+    console.log("[PDF Export] Launching Puppeteer...");
     browser = await puppeteer.launch(puppeteerOptions);
-        } catch (retryError: any) {
-          console.error("[PDF Export] ❌ Failed to launch Chrome after retry:", retryError);
-          throw launchError; // Throw original error
-        }
-      } else {
-        throw launchError;
-      }
-    }
 
     const page = await browser.newPage();
 
