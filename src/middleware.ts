@@ -25,6 +25,7 @@ const PUBLIC_ROUTES = [
   '/faqs', // Keep for backward compatibility
   '/tempdash', // Temporary dashboard page
   '/dashboard-preview', // Preview dashboard without authentication (for development)
+  '/diagramtest', // Test route for diagram generator (bypasses middleware)
   '/api',
 ]
 

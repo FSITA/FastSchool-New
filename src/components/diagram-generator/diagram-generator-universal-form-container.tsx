@@ -3,10 +3,11 @@
 import { useRef, useState } from "react";
 import UniversalForm from "@/components/presentation/universal-form/UniversalForm";
 import DiagramGenerationStep from "./diagram-generation-step";
-import DiagramDisplay from "./diagram-display";
+import MindmapDisplay from "./mindmap-display";
 import ContentExtractionNotificationBar from "@/components/shared/ContentExtractionNotificationBar";
 import { toast } from "sonner";
 import type { ProcessedContent } from "@/lib/presentation/universal-form-processor";
+import type { MindmapData } from "@/types/mindmap";
 
 export default function DiagramGeneratorUniversalFormContainer() {
   const [formStep, setFormStep] = useState(0);
@@ -14,7 +15,7 @@ export default function DiagramGeneratorUniversalFormContainer() {
   const [extractedContent, setExtractedContent] = useState<ProcessedContent | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string>("");
-  const [mermaidCode, setMermaidCode] = useState<string>("");
+  const [mindmapData, setMindmapData] = useState<MindmapData | null>(null);
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [extractionMessage, setExtractionMessage] = useState<string | undefined>(undefined);
@@ -92,7 +93,7 @@ export default function DiagramGeneratorUniversalFormContainer() {
 
     setIsLoading(true);
     setError("");
-    setMermaidCode("");
+    setMindmapData(null);
 
     try {
       // Prepare form data with pre-extracted content if available
@@ -130,18 +131,18 @@ export default function DiagramGeneratorUniversalFormContainer() {
 
       const data = await response.json();
       
-      if (data.success && data.mermaidCode) {
-        setMermaidCode(data.mermaidCode);
+      if (data.success && data.mindmap) {
+        setMindmapData(data.mindmap);
         setFormStep(2);
-        toast.success("Diagramma generato con successo!");
+        toast.success("Mappa mentale generata con successo!");
       } else {
-        throw new Error(data.error || "Failed to generate diagram");
+        throw new Error(data.error || "Failed to generate mindmap");
       }
     } catch (error) {
       console.error("Error generating diagram:", error);
       const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto";
       setError(errorMessage);
-      toast.error("Errore nella generazione del diagramma");
+      toast.error("Errore nella generazione della mappa mentale");
     } finally {
       setIsLoading(false);
     }
@@ -149,7 +150,7 @@ export default function DiagramGeneratorUniversalFormContainer() {
 
   const handleBackToForm = () => {
     setFormStep(0);
-    setMermaidCode("");
+    setMindmapData(null);
     setError("");
   };
 
@@ -158,8 +159,12 @@ export default function DiagramGeneratorUniversalFormContainer() {
     setUniversalFormData(null);
     setExtractedContent(null);
     setExtractionError("");
-    setMermaidCode("");
+    setMindmapData(null);
     setError("");
+  };
+
+  const handleMindmapUpdate = (updatedData: MindmapData) => {
+    setMindmapData(updatedData);
   };
 
   // Determine source type for extraction loader
@@ -211,12 +216,13 @@ export default function DiagramGeneratorUniversalFormContainer() {
         </div>
       )}
       
-      {formStep === 2 && (
-        <DiagramDisplay 
-          mermaidCode={mermaidCode}
+      {formStep === 2 && mindmapData && (
+        <MindmapDisplay 
+          mindmapData={mindmapData}
           error={error}
           onBackToForm={handleBackToForm}
           onNewDiagram={handleNewDiagram}
+          onMindmapUpdate={handleMindmapUpdate}
         />
       )}
     </section>

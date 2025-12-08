@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(cuid())
+  name             String?
+  email            String?           @unique
+  emailVerified    DateTime?
+  image            String?
+  avatar           String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  accounts         Account[]
+  sessions         Session[]
+  chatSessions     ChatSession[]
+  messages         Message[]
+  flashCards       FlashCard[]
+  flashCardFolders FlashCardFolder[]
+  mindmaps         Mindmap[]
+  quizzes          Quiz[]
+  quizAttempts     QuizAttempt[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model ChatSession {
+  id        String    @id @default(cuid())
+  topic     String?
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Message {
+  id            String      @id @default(cuid())
+  content       String
+  role          String // "user" or "ai"
+  createdAt     DateTime    @default(now())
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+}
+
+model FlashCard {
+  id           String           @id @default(cuid())
+  term         String
+  translation  String?
+  partOfSpeech String?
+  definition   String
+  example      String
+  userId       String
+  user         User             @relation(fields: [userId], references: [id])
+  folderId     String?
+  folder       FlashCardFolder? @relation(fields: [folderId], references: [id])
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  tag          String?
+}
+
+model FlashCardFolder {
+  id        String      @id @default(cuid())
+  name      String
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  cards     FlashCard[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Mindmap {
+  id        String   @id @default(cuid())
+  topic     String
+  data      Json
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Quiz {
+  id             String        @id @default(cuid())
+  title          String
+  score          Int?
+  totalQuestions Int?
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  attempts       QuizAttempt[]
+}
+
+model QuizAttempt {
+  id        String                @id @default(cuid())
+  userId    String
+  quizId    String
+  score     Int
+  createdAt DateTime              @default(now())
+  questions QuizAttemptQuestion[]
+  user      User                  @relation(fields: [userId], references: [id])
+  quiz      Quiz                  @relation(fields: [quizId], references: [id])
+}
+
+model QuizAttemptQuestion {
+  id               String      @id @default(cuid())
+  attemptId        String
+  question         String
+  options          String // JSON stringified array
+  answer           String
+  userAnswer       String
+  explanation      String?
+  wrongExplanation String? // JSON stringified object
+  questionIndex    Int
+  attempt          QuizAttempt @relation(fields: [attemptId], references: [id])
+
+  @@unique([attemptId, questionIndex])
+}

@@ -25,36 +25,52 @@ Puppeteer can't find the Chrome executable on Render.com because:
 
 ## Render.com Environment Variables
 
-To ensure PDF export works on Render.com, set these environment variables:
+The code now automatically handles Chrome installation, but you can optionally set:
 
-### Required (if not already set):
+### Optional (for explicit control):
 ```
 PUPPETEER_CACHE_DIR=/opt/render/.cache/puppeteer
 ```
 
-### Optional (if you want to specify Chrome path directly):
+Or if you know the exact Chrome path:
 ```
 PUPPETEER_EXECUTABLE_PATH=/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome
 ```
 
-## How to Set Environment Variables on Render.com
+**Note:** The code will automatically:
+- Create the cache directory if it doesn't exist
+- Install Chrome if it's not found
+- Set the cache directory environment variable
+- Retry installation if launch fails
+
+## How to Set Environment Variables on Render.com (Optional)
+
+The code should work automatically, but if you want explicit control:
 
 1. Go to your Render.com dashboard
 2. Select your service
 3. Go to **Environment** tab
-4. Add the environment variable:
+4. Add the environment variable (optional):
    - **Key:** `PUPPETEER_CACHE_DIR`
    - **Value:** `/opt/render/.cache/puppeteer`
 5. Save changes
 6. Redeploy your service
 
+**Note:** The code will automatically create the directory and install Chrome if needed, so this is optional.
+
 ## How It Works Now
 
-1. **Checks environment variable** `PUPPETEER_EXECUTABLE_PATH` first
-2. **If on Render.com**, looks for Chrome in `/opt/render/.cache/puppeteer`
-3. **Searches multiple possible paths** where Chrome might be installed
-4. **If not found**, automatically installs Chrome using `@puppeteer/browsers`
-5. **Sets the executable path** for Puppeteer to use
+1. **Checks environment variable** `PUPPETEER_EXECUTABLE_PATH` first (if set)
+2. **Determines cache directory**:
+   - Uses `PUPPETEER_CACHE_DIR` if set
+   - Uses `/opt/render/.cache/puppeteer` on Render.com
+   - Falls back to `.cache/puppeteer` in project root
+3. **Creates cache directory** if it doesn't exist
+4. **Searches for Chrome** in multiple possible paths
+5. **If not found**, automatically installs Chrome using `@puppeteer/browsers`
+6. **Sets environment variables** so Puppeteer knows where to look
+7. **Retries installation** if launch fails
+8. **Sets the executable path** for Puppeteer to use
 
 ## Testing
 

@@ -35,9 +35,9 @@ export default function DiagramGenerationStep({
                 📊 Informazioni importanti:
               </h3>
               <p className="text-sm text-blue-700 leading-relaxed">
-                Se il diagramma non viene visualizzato correttamente a causa delle 
-                limitazioni del browser, utilizza i controlli di zoom e scarica il 
-                file SVG per una visualizzazione ottimale.
+                La mappa mentale verrà generata in base al contenuto fornito. 
+                Potrai interagire con i nodi per visualizzare le definizioni e 
+                modificare la struttura se necessario.
               </p>
             </div>
           </div>
@@ -85,7 +85,7 @@ export default function DiagramGenerationStep({
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                Genera Diagramma
+                Genera Mappa Mentale
               </>
             )}
           </button>
