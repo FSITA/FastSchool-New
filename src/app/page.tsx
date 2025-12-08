@@ -12,6 +12,7 @@ import Header from '../components/shared/Header';
 import FAQSection from '../components/shared/FAQSection';
 import CTASection from '../components/shared/CTASection';
 import Footer from '../components/shared/Footer';
+import { Loader } from '@/components/ui/loader';
 
 const toolLinks = [
   {
@@ -263,10 +264,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento...</p>
-        </div>
+        <Loader size="lg" variant="dots" />
       </div>
     );
   }
@@ -387,8 +385,13 @@ export default function Home() {
           </div>
         </section>
           
-        {/* Help Banner - White Background, Full Opacity */}
-        <section className="bg-white pb-0">
+        {/* Help Banner - Gradient Background starting above this section */}
+        <section 
+          className="pb-0 pt-8"
+          style={{
+            background: 'linear-gradient(to bottom, #ffffff 0%, #ffffff 20%, #f8fafc 40%, #eff6ff 60%, #dbeafe 80%, #dbeafe 100%)',
+          }}
+        >
           <div className="max-w-6xl mx-auto px-6 pb-12">
             <ToolCard
               title="Non sei sicuro? Cosa fare?"
@@ -401,11 +404,11 @@ export default function Home() {
           </div>
         </section>
 
-        {/* All Tools Section - Smooth Gradient Background starting from white */}
+        {/* All Tools Section - Continuing Gradient Background */}
         <section 
           className="py-12"
           style={{
-            background: 'linear-gradient(to bottom, #ffffff 0%, #f8fafc 5%, #eff6ff 15%, #dbeafe 30%, #dbeafe 100%)',
+            background: 'linear-gradient(to bottom, #dbeafe 0%, #dbeafe 100%)',
           }}
         >
           <div className="max-w-6xl mx-auto px-6 pb-16">

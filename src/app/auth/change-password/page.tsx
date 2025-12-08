@@ -26,13 +26,13 @@ export default function ChangePasswordPage() {
     setError('')
 
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match')
+      setError('Le password non corrispondono')
       setLoading(false)
       return
     }
 
     if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters')
+      setError('La nuova password deve contenere almeno 6 caratteri')
       setLoading(false)
       return
     }
@@ -56,15 +56,15 @@ export default function ChangePasswordPage() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
         <Card className="w-full max-w-md shadow-lg">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold">Password Updated</CardTitle>
+            <CardTitle className="text-2xl font-bold">Password Aggiornata</CardTitle>
             <CardDescription>
-              Your password has been successfully updated.
+              La tua password è stata aggiornata con successo.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Alert>
               <AlertDescription>
-                You will be redirected to the home page shortly.
+                Sarai reindirizzato alla home page a breve.
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -77,9 +77,9 @@ export default function ChangePasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Change Password</CardTitle>
+          <CardTitle className="text-2xl font-bold">Cambia Password</CardTitle>
           <CardDescription>
-            Enter your new password below.
+            Inserisci la tua nuova password qui sotto.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -91,7 +91,7 @@ export default function ChangePasswordPage() {
           
           <form onSubmit={handleChangePassword} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="newPassword">New Password</Label>
+              <Label htmlFor="newPassword">Nuova Password</Label>
               <Input
                 id="newPassword"
                 type="password"
@@ -103,7 +103,7 @@ export default function ChangePasswordPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword">Conferma Nuova Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -116,13 +116,13 @@ export default function ChangePasswordPage() {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Update Password
+              Aggiorna Password
             </Button>
           </form>
         </CardContent>
         <CardFooter>
           <Button variant="outline" className="w-full" onClick={() => window.location.href = '/'}>
-            Cancel
+            Annulla
           </Button>
         </CardFooter>
       </Card>

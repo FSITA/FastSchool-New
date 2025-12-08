@@ -510,6 +510,17 @@ async function tier2GeminiSummary(
     };
   } catch (error) {
     console.error("❌ [Tier 2: Gemini] Gemini request failed", error);
+    
+    // Check if error is about image limit (10800 images)
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes("10800 images") || errorMessage.includes("fewer than")) {
+      console.warn("⚠️ [Tier 2: Gemini] Video exceeds Gemini image limit");
+      return {
+        success: false,
+        error: "Il video supera il limite di Gemini. Utilizza un video più corto per una trascrizione migliore e più rapida.",
+      };
+    }
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error in Gemini summary tier",

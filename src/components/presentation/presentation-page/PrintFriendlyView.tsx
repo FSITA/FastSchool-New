@@ -16,6 +16,7 @@ import {
 } from "@/lib/presentation/themes";
 import { useTheme } from "next-themes";
 import { getCustomThemeById } from "@/app/_actions/presentation/theme-actions";
+import { Loader } from "@/components/ui/loader";
 
 export function PrintFriendlyView() {
   const params = useParams();
@@ -287,7 +288,7 @@ export function PrintFriendlyView() {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-white">
-        <div className="text-lg">Caricamento presentazione...</div>
+        <Loader size="lg" variant="dots" />
       </div>
     );
   }

@@ -101,11 +101,11 @@ export function TrialStatusButton() {
             <TooltipTrigger asChild>
               <button className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-red-600/90 hover:text-red-700 hover:bg-red-50/30 transition-colors bg-transparent">
                 <XCircle className="h-3.5 w-3.5" />
-                <span>Free Trial ended</span>
+                <span>Prova Gratuita Terminata</span>
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              <p className="text-sm">Go to payment section to get a subscription in order to use AIs.</p>
+              <p className="text-sm">Vai alla sezione pagamenti per ottenere un abbonamento e utilizzare l'IA.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -113,7 +113,7 @@ export function TrialStatusButton() {
     }
 
     // Active trial
-    const daysText = daysRemaining === 1 ? '1 day' : `${daysRemaining} days`
+    const daysText = daysRemaining === 1 ? '1 giorno' : `${daysRemaining} giorni`
     console.log('[TrialStatusButton] ✅ Trial active, showing button with', daysText, 'remaining');
     return (
       <TooltipProvider>
@@ -121,11 +121,11 @@ export function TrialStatusButton() {
           <TooltipTrigger asChild>
             <button className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-green-600/90 hover:text-green-700 hover:bg-green-50/30 transition-colors bg-transparent">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Free Trial</span>
+              <span>Prova Gratuita</span>
             </button>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-sm">You have {daysText} left on your trial.</p>
+            <p className="text-sm">Ti rimangono {daysText} di prova.</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

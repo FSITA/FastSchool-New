@@ -118,7 +118,7 @@ export default function UniversalFormContainer() {
     setErrorMessage("");
 
     if (!universalFormData) {
-      toast.error("Please complete the first step");
+      toast.error("Completa il primo passaggio");
       return;
     }
 
@@ -142,12 +142,12 @@ export default function UniversalFormContainer() {
         router.push(`/presentation/generate/${result.presentation.id}`);
       } else {
         setIsGeneratingOutline(false);
-        toast.error(result.message || "Failed to create presentation");
+        toast.error(result.message || "Impossibile creare la presentazione");
       }
     } catch (error) {
       setIsGeneratingOutline(false);
       console.error("Error creating presentation:", error);
-      toast.error("Failed to create presentation");
+      toast.error("Impossibile creare la presentazione");
     }
   };
 
@@ -197,7 +197,7 @@ export default function UniversalFormContainer() {
 
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mt-4 max-w-lg mx-auto">
-          <strong className="font-bold">Error: </strong>
+          <strong className="font-bold">Errore: </strong>
           <span className="block sm:inline">{errorMessage}</span>
         </div>
       )}

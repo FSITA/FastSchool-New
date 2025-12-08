@@ -11,7 +11,7 @@ import {
   themes,
   type ThemeProperties,
 } from "@/lib/presentation/themes";
-import { Spinner } from "@/components/ui/spinner";
+import { Loader } from "@/components/ui/loader";
 import { getCustomThemeById } from "@/app/_actions/presentation/theme-actions";
 import { getPresentation } from "@/app/_actions/presentation/presentationActions";
 import { type ImageModelList } from "@/app/_actions/image/generate";
@@ -175,13 +175,7 @@ export default function PresentationGenerateWithIdPage() {
     return (
       <ThemeBackground>
         <div className="flex h-[calc(100vh-8rem)] flex-col items-center justify-center">
-          <div className="relative">
-            <Spinner className="h-10 w-10 text-primary" />
-          </div>
-          <div className="space-y-2 text-center">
-            <h2 className="text-2xl font-bold">Caricamento Struttura Presentazione</h2>
-            <p className="text-muted-foreground">Attendi un momento...</p>
-          </div>
+          <Loader size="lg" variant="dots" />
         </div>
       </ThemeBackground>
     );

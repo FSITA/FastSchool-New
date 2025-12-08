@@ -38,9 +38,12 @@ export default function ContentExtractionLoader({
       <p className="mt-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">
         {displayMessage}
       </p>
-      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-        Questo potrebbe richiedere alcuni secondi...
-      </p>
+      {/* Only show "Questo potrebbe richiedere alcuni secondi..." if no custom message is provided */}
+      {!message && (
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          Questo potrebbe richiedere alcuni secondi...
+        </p>
+      )}
     </div>
   );
 }

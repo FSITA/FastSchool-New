@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { ToolCard } from '@/components/ui/ToolCard';
-import { UserMenu } from '@/components/user/UserMenu';
-import { Loader } from '@/components/ui/loader';
+import { TrialStatusButton } from '@/components/shared/TrialStatusButton';
 
 const toolLinks = [
   {
@@ -163,36 +161,21 @@ const dashboardTools = [
   },
 ];
 
-export default function TempDashboard() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export default function DashboardPreview() {
   const [openToolsDropdown, setOpenToolsDropdown] = useState(false);
-
-  // Check if user is logged in
-  useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      setLoading(false);
-    };
-    checkAuth();
-  }, []);
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader size="lg" variant="dots" />
-      </div>
-    );
-  }
 
   const featuredTools = dashboardTools.filter(tool => tool.featured);
   const allTools = dashboardTools.filter(tool => !tool.featured);
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Preview Banner */}
+      <div className="bg-yellow-100 border-b border-yellow-300 py-2 px-4 text-center">
+        <p className="text-sm text-yellow-800 font-medium">
+          🔍 MODALITÀ ANTEPRIMA - Questa è un'anteprima della pagina dashboard
+        </p>
+      </div>
+
       {/* Header - White Background */}
       <header className="border-b border-gray-200 bg-white">
         <div className="max-w-6xl mx-auto px-6 py-4">
@@ -253,7 +236,10 @@ export default function TempDashboard() {
                 </Link>
               </div>
             </div>
-            <UserMenu />
+            <div className="flex items-center gap-3">
+              {/* TrialStatusButton - This is what we want to preview */}
+              <TrialStatusButton />
+            </div>
           </div>
         </div>
       </header>
@@ -338,3 +324,4 @@ export default function TempDashboard() {
     </div>
   );
 }
+

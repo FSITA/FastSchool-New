@@ -56,11 +56,11 @@ export function PresentationDashboard() {
         );
         router.push(`/presentation/generate/${result.presentation.id}`);
       } else {
-        toast.error(result.message || "Failed to create presentation");
+        toast.error(result.message || "Impossibile creare la presentazione");
       }
     } catch (error) {
       console.error("Error creating presentation:", error);
-      toast.error("Failed to create presentation");
+      toast.error("Impossibile creare la presentazione");
     }
   };
 

@@ -56,9 +56,12 @@ export default function ContentExtractionNotificationBar({
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
               {displayMessage}
             </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Questo potrebbe richiedere alcuni secondi...
-            </p>
+            {/* Only show "Questo potrebbe richiedere alcuni secondi..." if no custom message is provided */}
+            {!message && (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Questo potrebbe richiedere alcuni secondi...
+              </p>
+            )}
           </div>
           
           {/* Close button (optional, for manual dismissal) */}

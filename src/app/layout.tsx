@@ -10,6 +10,13 @@ export const metadata: Metadata = {
   title: "FastSchool | Apprendimento basato sull'IA",
   description:
     "Genera presentazioni, flashcard, piani didattici e lezioni dai tuoi appunti usando l'IA.",
+  icons: {
+    icon: [
+      { url: "/logo.png", type: "image/png" },
+    ],
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default async function RootLayout({

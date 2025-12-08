@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react'
 export default function AuthCallbackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [message, setMessage] = useState('Processing authentication...')
+  const [message, setMessage] = useState('Elaborazione autenticazione...')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 3
@@ -79,7 +79,7 @@ export default function AuthCallbackPage() {
         // Method 1: Try getSessionFromUrl if available
         if (typeof supabase.auth.getSessionFromUrl === 'function') {
           console.log('Using getSessionFromUrl method...')
-          setMessage('Processing session from URL...')
+          setMessage('Elaborazione sessione dall\'URL...')
           
           const { data, error } = await supabase.auth.getSessionFromUrl({ 
             storeSession: true 
@@ -104,7 +104,7 @@ export default function AuthCallbackPage() {
               return
             }
             
-            setErrorMsg('Authentication failed. Please try again.')
+            setErrorMsg('Autenticazione fallita. Riprova.')
             return
           }
 
@@ -171,7 +171,7 @@ export default function AuthCallbackPage() {
 
         // Method 2: Fallback to onAuthStateChange if getSessionFromUrl is not available
         console.log('getSessionFromUrl not available, using onAuthStateChange fallback...')
-        setMessage('Waiting for authentication state...')
+        setMessage('In attesa dello stato di autenticazione...')
         
         let authResolved = false
         
@@ -250,7 +250,7 @@ export default function AuthCallbackPage() {
           if (!mounted || authResolved) return
           
           console.log('Auth callback timeout reached')
-          setErrorMsg('Authentication timeout. Please try again.')
+          setErrorMsg('Timeout autenticazione. Riprova.')
           if (authSubscription) {
             authSubscription.unsubscribe()
           }
@@ -258,7 +258,7 @@ export default function AuthCallbackPage() {
 
       } catch (err) {
         console.error('❌ Callback processing failed:', err)
-        setErrorMsg('Authentication callback failed. Please try again.')
+        setErrorMsg('Callback autenticazione fallito. Riprova.')
       }
     }
 
@@ -284,10 +284,10 @@ export default function AuthCallbackPage() {
               href="/auth/login" 
               className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
-              Go to Login
+              Vai al Login
             </a>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Retry attempt: {retryCount}/{maxRetries}
+              Tentativo: {retryCount}/{maxRetries}
             </div>
           </div>
         </div>
@@ -304,7 +304,7 @@ export default function AuthCallbackPage() {
         </div>
         {retryCount > 0 && (
           <div className="text-sm text-gray-500">
-            Retry attempt: {retryCount}/{maxRetries}
+            Tentativo: {retryCount}/{maxRetries}
           </div>
         )}
       </div>

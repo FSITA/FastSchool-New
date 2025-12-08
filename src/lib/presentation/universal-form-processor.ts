@@ -1,5 +1,6 @@
 import { fetchTranscriptWithFallback } from "@/lib/youtube-transcript/youtube-transcript-service";
 import { randomInt } from "crypto";
+import { fetchWithRetry, delay } from "@/lib/youtube-transcript/request-utils";
 
 /**
  * YouTube transcript function - Uses 2-tier fallback system
@@ -44,7 +45,7 @@ async function getYoutubeTranscript(
     console.error("❌ [getYoutubeTranscript] Error:", result.error);
     console.log("=".repeat(60));
     throw new Error(
-      result.error || "Transcript not found or unavailable for this video"
+      result.error || "Trascrizione non trovata o non disponibile per questo video. Tutti i metodi sono falliti."
     );
   }
 
@@ -120,7 +121,15 @@ async function processYouTubeUrl(
     console.log("=".repeat(60));
     
     if (strictMode) {
-      throw new Error(`Error processing YouTube URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMsg = error instanceof Error ? error.message : 'Errore sconosciuto';
+      // Translate common error messages
+      let translatedError = errorMsg;
+      if (errorMsg.includes('Transcript not found') || errorMsg.includes('Trascrizione non trovata')) {
+        translatedError = 'Trascrizione non trovata o non disponibile per questo video. Tutti i metodi sono falliti.';
+      } else if (errorMsg.includes('Error processing YouTube URL')) {
+        translatedError = `Errore durante l'elaborazione dell'URL di YouTube: ${errorMsg.replace('Error processing YouTube URL: ', '')}`;
+      }
+      throw new Error(`Errore durante l'elaborazione dell'URL di YouTube: ${translatedError}`);
     }
     return null;
   }
@@ -140,9 +149,9 @@ async function processWikipediaLink(
   try {
     const title = wikipediaLink.trim().split("/").pop();
     if (!title) {
-      const errorMsg = "Could not extract title from Wikipedia URL";
+      const errorMsg = "Impossibile estrarre il titolo dall'URL di Wikipedia";
       if (strictMode) {
-        throw new Error(errorMsg);
+        throw new Error(`Errore durante l'elaborazione dell'URL di Wikipedia: ${errorMsg}`);
       }
       return null;
     }
@@ -151,14 +160,32 @@ async function processWikipediaLink(
     const decodedTitle = decodeURIComponent(title);
     console.log(`🔍 Fetching Wikipedia content for: ${decodedTitle}`);
     
-    const response = await fetch(
-      `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&titles=${encodeURIComponent(decodedTitle)}`
+    // Add a small delay before request to avoid rate limiting
+    await delay(500); // 500ms delay
+    
+    // Wikipedia API requires User-Agent header
+    const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&titles=${encodeURIComponent(decodedTitle)}`;
+    
+    const response = await fetchWithRetry(
+      apiUrl,
+      {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Fastschool-Presentation-AI/1.0 (https://fastschool.ai; contact@fastschool.ai)',
+          'Accept': 'application/json',
+        },
+      },
+      3, // maxRetries: 3 attempts
+      'wikipedia_api'
     );
     
     if (!response.ok) {
-      const errorMsg = `Wikipedia API error: ${response.status}`;
+      let errorMsg = `Errore API Wikipedia: ${response.status}`;
+      if (response.status === 429) {
+        errorMsg = 'Errore API Wikipedia: 429 (Troppe richieste). Riprova tra qualche istante.';
+      }
       if (strictMode) {
-        throw new Error(errorMsg);
+        throw new Error(`Errore durante l'elaborazione dell'URL di Wikipedia: ${errorMsg}`);
       }
       return null;
     }
@@ -173,18 +200,18 @@ async function processWikipediaLink(
     const pageId = Object.keys(pages)[0];
     
     if (!pageId || !pages[pageId] || pageId === "-1") {
-      const errorMsg = "No Wikipedia page found";
+      const errorMsg = "Pagina Wikipedia non trovata";
       if (strictMode) {
-        throw new Error(errorMsg);
+        throw new Error(`Errore durante l'elaborazione dell'URL di Wikipedia: ${errorMsg}`);
       }
       return null;
     }
     
     const extract = pages[pageId].extract;
     if (!extract || extract.trim().length === 0) {
-      const errorMsg = "Wikipedia page has no content";
+      const errorMsg = "La pagina Wikipedia non ha contenuto";
       if (strictMode) {
-        throw new Error(errorMsg);
+        throw new Error(`Errore durante l'elaborazione dell'URL di Wikipedia: ${errorMsg}`);
       }
       return null;
     }
@@ -203,7 +230,25 @@ async function processWikipediaLink(
   } catch (error) {
     console.error("Error fetching Wikipedia content:", error);
     if (strictMode) {
-      throw new Error(`Error processing Wikipedia URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMsg = error instanceof Error ? error.message : 'Errore sconosciuto';
+      // If error already contains our translated prefix, use it as-is
+      if (errorMsg.includes("Errore durante l'elaborazione dell'URL di Wikipedia")) {
+        throw new Error(errorMsg);
+      }
+      // Translate common error messages
+      let translatedError = errorMsg;
+      if (errorMsg.includes('Wikipedia API error: 429') || errorMsg.includes('429')) {
+        translatedError = 'Errore API Wikipedia: 429 (Troppe richieste). Riprova tra qualche istante.';
+      } else if (errorMsg.includes('Wikipedia API error')) {
+        translatedError = errorMsg.replace('Wikipedia API error', 'Errore API Wikipedia');
+      } else if (errorMsg.includes('Could not extract title')) {
+        translatedError = 'Impossibile estrarre il titolo dall\'URL di Wikipedia';
+      } else if (errorMsg.includes('No Wikipedia page found')) {
+        translatedError = 'Pagina Wikipedia non trovata';
+      } else if (errorMsg.includes('Wikipedia page has no content')) {
+        translatedError = 'La pagina Wikipedia non ha contenuto';
+      }
+      throw new Error(`Errore durante l'elaborazione dell'URL di Wikipedia: ${translatedError}`);
     }
     return null;
   }

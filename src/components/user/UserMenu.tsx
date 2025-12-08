@@ -26,9 +26,9 @@ export function UserMenu() {
     const { error } = await signOut()
     
     if (error) {
-      toast.error('Error signing out')
+      toast.error('Errore durante il logout')
     } else {
-      toast.success('Signed out successfully')
+      toast.success('Logout effettuato con successo')
       router.push('/auth/login')
     }
     
@@ -67,7 +67,7 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger className="relative h-8 w-8 rounded-full">
         <Avatar className="h-8 w-8">
-          <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email || 'User'} />
+          <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email || 'Utente'} />
           <AvatarFallback>{userInitials}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
@@ -75,7 +75,7 @@ export function UserMenu() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">
-              {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+              {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utente'}
             </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}

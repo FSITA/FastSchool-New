@@ -3,6 +3,7 @@ import PresentationPage from "@/components/presentation/presentation-page/Main";
 import { PrintFriendlyView } from "@/components/presentation/presentation-page/PrintFriendlyView";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { Loader } from "@/components/ui/loader";
 
 function PageContent() {
   const searchParams = useSearchParams();
@@ -17,7 +18,11 @@ function PageContent() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Caricamento...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader size="lg" variant="dots" />
+      </div>
+    }>
       <PageContent />
     </Suspense>
   );

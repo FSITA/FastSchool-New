@@ -1,9 +1,37 @@
 "use server";
 
 import { type PlateSlide } from "@/components/presentation/utils/parser";
-// Authentication removed - allow access without login
 import { prisma } from "@/lib/prisma";
 import { type InputJsonValue } from "@prisma/client/runtime/library";
+import { createClient } from "@/lib/supabase/server";
+
+// Helper function to ensure User exists in database
+async function ensureUserExists(userId: string, email?: string | null, name?: string | null) {
+  try {
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
+      // Create user if doesn't exist
+      await prisma.user.create({
+        data: {
+          id: userId,
+          email: email || null,
+          name: name || null,
+        },
+      });
+      console.log('[createPresentation] Created User record:', userId);
+    }
+  } catch (error: any) {
+    // If user already exists (race condition), that's fine
+    if (error.code !== 'P2002') {
+      console.error('[createPresentation] Error ensuring user exists:', error);
+      throw error;
+    }
+  }
+}
 
 export async function createPresentation(
   content: {
@@ -16,10 +44,24 @@ export async function createPresentation(
   presentationStyle?: string,
   language?: string
 ) {
-  // Skip authentication check - allow access without login
-  const userId = "anonymous-user"; // Default user ID since auth is disabled
-
   try {
+    // Get authenticated user
+    const supabase = createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error('[createPresentation] Authentication error:', authError);
+      return {
+        success: false,
+        message: "Authentication required",
+      };
+    }
+
+    const userId = user.id;
+
+    // Ensure User record exists in database
+    await ensureUserExists(userId, user.email, user.user_metadata?.name || user.email?.split('@')[0]);
+
     const presentation = await prisma.baseDocument.create({
       data: {
         type: "PRESENTATION",

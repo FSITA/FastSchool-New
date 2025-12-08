@@ -141,7 +141,7 @@ export default function LessonPlannerFormContainer({ onLoadingStateChange }: Les
     onLoadingStateChange?.(true);
 
     if (!universalFormData) {
-      toast.error("Please complete the first step");
+      toast.error("Completa il primo passaggio");
       setIsLoading(false);
       onLoadingStateChange?.(false);
       return;

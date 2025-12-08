@@ -93,7 +93,7 @@ export default function FlashcardUniversalFormContainer({
 
     if (!extractedContent) {
       console.log("❌ No extracted content found");
-      toast.error("Please complete the first step");
+      toast.error("Completa il primo passaggio");
       return;
     }
 
