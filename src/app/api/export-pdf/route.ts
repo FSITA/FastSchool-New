@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
-import chromium from "@sparticuz/chromium";
+
+import puppeteerCore from "puppeteer-core";
 import { join } from "path";
 import { existsSync } from "fs";
 
 export async function POST(req: NextRequest) {
   let browser;
-  
+
   try {
     const { presentationId } = await req.json();
 
@@ -22,54 +22,79 @@ export async function POST(req: NextRequest) {
     const host = req.headers.get("host") || "localhost:3000";
     const baseUrl = `${protocol}://${host}`;
 
-    // Configure Puppeteer for Render.com
-    // Use @sparticuz/chromium for serverless/cloud environments (works better than regular Chrome)
+    // Configure Puppeteer for Render.com vs Local
     let executablePath: string | undefined;
-    
-    // Try to use serverless Chromium first (best for Render.com)
-    if (process.env.RENDER || process.env.NODE_ENV === "production") {
+    let puppeteerArgs: string[] = [];
+    let isHeadless: boolean | 'shell' = true;
+
+    // Detect environment
+    const isRender = !!process.env.RENDER;
+    const isProduction = process.env.NODE_ENV === "production";
+
+    // Logic to determine executable path and args
+    if (isRender || isProduction) {
       try {
-        // Configure Chromium for serverless environment
-        chromium.setGraphicsMode(false); // Disable graphics for headless
+        console.log("[PDF Export] 🚀 Running in Production/Render environment");
+        // Dynamically import @sparticuz/chromium to avoid local build issues
+        const chromium = (await import("@sparticuz/chromium")).default;
+
+        // Setup for serverless
+        // chromium.setGraphicsMode(false);
+
+        // Get path
         executablePath = await chromium.executablePath();
-        console.log("[PDF Export] ✅ Using serverless Chromium:", executablePath);
-      } catch (chromiumError: any) {
-        console.warn("[PDF Export] ⚠️ Failed to get serverless Chromium, will try other options:", chromiumError?.message);
+
+        // Use sparticuz args (includes --no-sandbox, etc)
+        puppeteerArgs = [...chromium.args, "--disable-extensions"];
+        isHeadless = chromium.headless;
+
+        console.log("[PDF Export] ✅ Serverless Chromium path:", executablePath);
+      } catch (error) {
+        console.error("[PDF Export] ❌ Failed to load serverless chromium:", error);
       }
     }
-    
-    // Fallback: Check environment variable
-    if (!executablePath && process.env.PUPPETEER_EXECUTABLE_PATH) {
-      executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-      console.log("[PDF Export] Using Chrome from PUPPETEER_EXECUTABLE_PATH:", executablePath);
-    }
-    
-    // Launch Puppeteer with Render.com-compatible configuration
-    const puppeteerOptions: any = {
-      headless: true,
-      args: [
+
+    // Fallback or Local Development
+    if (!executablePath) {
+      console.log("[PDF Export] 💻 Running in Local environment (or fallback)");
+
+      // Check PUPPETEER_EXECUTABLE_PATH env var
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        console.log("[PDF Export] Using ENV provided Chrome:", executablePath);
+      } else {
+        // Try to use locally installed puppeteer's chrome
+        try {
+          // Dynamic import to avoid bundling issues
+          const puppeteer = (await import("puppeteer")).default;
+          executablePath = puppeteer.executablePath();
+          console.log("[PDF Export] Using local Puppeteer Chrome:", executablePath);
+        } catch (e) {
+          console.warn("[PDF Export] ⚠️ Could not find local puppeteer executable", e);
+        }
+      }
+
+      // Standard args for local/fallback
+      puppeteerArgs = [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process",
-        "--single-process", // Important for serverless environments
-        "--disable-extensions",
-      ],
-    };
-    
-    // Set executable path if we have one
-    if (executablePath) {
-      puppeteerOptions.executablePath = executablePath;
-      console.log("[PDF Export] ✅ Launching with executable path:", executablePath);
-    } else {
-      console.log("[PDF Export] No explicit executable path, Puppeteer will try to find Chrome automatically");
+      ];
     }
-    
+
     // Launch browser
     console.log("[PDF Export] Launching Puppeteer...");
-    browser = await puppeteer.launch(puppeteerOptions);
+    browser = await puppeteerCore.launch({
+      args: puppeteerArgs,
+      defaultViewport: {
+        width: 1920,
+        height: 1080,
+      },
+      executablePath: executablePath || undefined, // undefined lets it try to find default if we missed something (local only)
+      headless: isHeadless,
+
+    });
 
     const page = await browser.newPage();
 
@@ -85,9 +110,9 @@ export async function POST(req: NextRequest) {
 
     // Navigate to print-friendly page
     const url = `${baseUrl}/presentation/${presentationId}?pdf=1`;
-    
+
     console.log(`[PDF Export] Navigating to: ${url}`);
-    
+
     await page.goto(url, {
       waitUntil: "networkidle0",
       timeout: 0, // No timeout limit
@@ -104,7 +129,7 @@ export async function POST(req: NextRequest) {
     // Wait for main container
     console.log("[PDF Export] Waiting for .print-view...");
     await page.waitForSelector(".print-view", { timeout: 60000 });
-    
+
     console.log("[PDF Export] Waiting for .presentation-slides...");
     await page.waitForSelector(".presentation-slides", { timeout: 60000 });
 
@@ -157,7 +182,7 @@ export async function POST(req: NextRequest) {
         const containers = document.querySelectorAll('[class*="slide-container"]');
         const editors = document.querySelectorAll("[contenteditable='true']");
         const slidesContainer = document.querySelector(".presentation-slides");
-        
+
         // Get what's actually in the container
         const containerChildren = slidesContainer?.children || [];
         const childrenInfo = Array.from(containerChildren).map((child, idx) => ({
@@ -180,11 +205,11 @@ export async function POST(req: NextRequest) {
       console.log("[PDF Export] Fallback DOM check:", JSON.stringify(fallbackResult, null, 2));
 
       // If we have any slides, proceed
-      const hasAnySlides = fallbackResult.wrappers > 0 || 
-                          fallbackResult.slides > 0 || 
-                          fallbackResult.containers > 0 ||
-                          fallbackResult.editors > 0;
-      
+      const hasAnySlides = fallbackResult.wrappers > 0 ||
+        fallbackResult.slides > 0 ||
+        fallbackResult.containers > 0 ||
+        fallbackResult.editors > 0;
+
       if (!hasAnySlides) {
         // Take screenshot for debugging
         await page.screenshot({
@@ -192,7 +217,7 @@ export async function POST(req: NextRequest) {
           fullPage: true,
         });
         console.log("[PDF Export] Screenshot saved: debug-timeout.png");
-        
+
         throw new Error(
           `No slides found. Container has ${fallbackResult.containerChildren} children but no slide elements. Check debug-timeout.png`
         );
@@ -229,7 +254,7 @@ export async function POST(req: NextRequest) {
 
     // Wait for React to fully render all slide content (editor, images, etc.)
     console.log("[PDF Export] Waiting for React to fully render slide content...");
-    
+
     // Wait for all slide editors to be ready (they have contenteditable attributes)
     await page.waitForFunction(
       () => {
@@ -289,20 +314,20 @@ export async function POST(req: NextRequest) {
             (slide as HTMLElement).style.left = "-9999px";
           }
         });
-        
+
         // Hide all preview renderers (they cause duplicate content)
         const previewRenderers = document.querySelectorAll('[class*="SlidePreviewRenderer"], [id^="preview-"]');
         previewRenderers.forEach((preview) => {
           (preview as HTMLElement).style.display = "none";
           (preview as HTMLElement).style.visibility = "hidden";
         });
-        
+
         // Scroll to the current slide to ensure it's in view
         const currentSlide = slides[slideIndex] as HTMLElement;
         if (currentSlide) {
           currentSlide.scrollIntoView({ behavior: "instant", block: "start" });
         }
-        
+
         // Ensure body height matches content to avoid multiple pages
         document.body.style.height = "auto";
         document.documentElement.style.height = "auto";
@@ -323,7 +348,7 @@ export async function POST(req: NextRequest) {
             (slide as HTMLElement).style.left = "-9999px";
           }
         });
-        
+
         // Ensure ALL preview renderers are hidden (these cause duplicates)
         const previews = document.querySelectorAll('[class*="SlidePreviewRenderer"], [id^="preview-"]');
         previews.forEach((preview) => {
@@ -397,15 +422,15 @@ export async function POST(req: NextRequest) {
         const presentationSlide = slide.querySelector(
           '.presentation-slide[data-slide-content="true"]'
         ) as HTMLElement;
-        
+
         // Use the presentation slide dimensions if found, otherwise use wrapper
         const targetElement = presentationSlide || slide;
-        
+
         // Get bounding box
         const rect = targetElement.getBoundingClientRect();
         // Also check computed styles for actual size
         const computed = window.getComputedStyle(targetElement);
-        
+
         return {
           width: Math.max(rect.width, parseInt(computed.width) || rect.width),
           height: Math.max(rect.height, parseInt(computed.height) || rect.height),
@@ -436,7 +461,7 @@ export async function POST(req: NextRequest) {
         const slide = document.querySelector(
           `.slide-wrapper:nth-child(${slideIndex + 1})`
         ) as HTMLElement;
-        
+
         if (slide) {
           // Position slide at top-left
           slide.style.position = "absolute";
@@ -445,7 +470,7 @@ export async function POST(req: NextRequest) {
           slide.style.width = `${width}px`;
           slide.style.height = `${height}px`;
         }
-        
+
         // Set body to exact slide size
         document.body.style.width = `${width}px`;
         document.body.style.height = `${height}px`;
@@ -453,7 +478,7 @@ export async function POST(req: NextRequest) {
         document.body.style.padding = "0";
         document.body.style.overflow = "hidden";
         document.body.style.position = "relative";
-        
+
         const printView = document.querySelector(".print-view");
         if (printView) {
           (printView as HTMLElement).style.width = `${width}px`;
@@ -463,7 +488,7 @@ export async function POST(req: NextRequest) {
           (printView as HTMLElement).style.overflow = "hidden";
           (printView as HTMLElement).style.position = "relative";
         }
-        
+
         const slidesContainer = document.querySelector(".presentation-slides");
         if (slidesContainer) {
           (slidesContainer as HTMLElement).style.width = `${width}px`;
@@ -471,7 +496,7 @@ export async function POST(req: NextRequest) {
           (slidesContainer as HTMLElement).style.overflow = "hidden";
           (slidesContainer as HTMLElement).style.position = "relative";
         }
-        
+
         // Set html element size too
         document.documentElement.style.width = `${width}px`;
         document.documentElement.style.height = `${height}px`;
@@ -483,7 +508,7 @@ export async function POST(req: NextRequest) {
       // Set viewport to exactly match slide dimensions (no padding to avoid misalignment)
       const viewportWidth = Math.ceil(finalWidth);
       const viewportHeight = Math.ceil(finalHeight);
-      
+
       await page.setViewport({
         width: viewportWidth,
         height: viewportHeight,
@@ -492,7 +517,7 @@ export async function POST(req: NextRequest) {
 
       // Wait for viewport to update and ensure content is rendered
       await new Promise((resolve) => setTimeout(resolve, 500));
-      
+
       // Scroll to the current slide to ensure it's in view
       await page.evaluate((slideIndex) => {
         const slide = document.querySelector(
@@ -513,13 +538,13 @@ export async function POST(req: NextRequest) {
         ) as HTMLElement;
         if (!slide) return { visible: false, reason: "Slide not found" };
 
-        const isVisible = slide.offsetParent !== null && 
-                         window.getComputedStyle(slide).display !== "none" &&
-                         window.getComputedStyle(slide).visibility !== "hidden";
-        
+        const isVisible = slide.offsetParent !== null &&
+          window.getComputedStyle(slide).display !== "none" &&
+          window.getComputedStyle(slide).visibility !== "hidden";
+
         const images = slide.querySelectorAll("img");
         const textElements = slide.querySelectorAll("p, h1, h2, h3, h4, h5, h6, div[contenteditable]");
-        
+
         return {
           visible: isVisible,
           slideWidth: slide.offsetWidth,
@@ -557,7 +582,7 @@ export async function POST(req: NextRequest) {
       // Use screenshot-based approach for more reliable capture
       // Capture the slide element as an image, then embed in PDF
       const slideElement = await page.$(`.slide-wrapper:nth-child(${i + 1})`);
-      
+
       if (!slideElement) {
         console.log(`[PDF Export] Could not find slide element ${i + 1}, skipping...`);
         continue;
@@ -576,29 +601,29 @@ export async function POST(req: NextRequest) {
 
       // Add the screenshot as a PDF page with custom dimensions
       const image = await finalPdfDoc.embedPng(screenshot);
-      
+
       // Get actual image dimensions
       const imageDims = image.scale(1);
-      
+
       // Calculate page dimensions in points (PDF uses points, 1 inch = 72 points)
       const pageWidth = minWidth * 72; // inches to points
       const pageHeight = minHeight * 72; // inches to points
-      
+
       // Calculate scaling to fit the image to page while maintaining aspect ratio
       const scaleX = pageWidth / imageDims.width;
       const scaleY = pageHeight / imageDims.height;
       const scale = Math.min(scaleX, scaleY); // Use min to ensure it fits
-      
+
       const scaledWidth = imageDims.width * scale;
       const scaledHeight = imageDims.height * scale;
-      
+
       // Center the image on the page
       const x = (pageWidth - scaledWidth) / 2;
       const y = (pageHeight - scaledHeight) / 2;
-      
+
       // Create a new page with the slide's dimensions
       const pdfPage = finalPdfDoc.addPage([pageWidth, pageHeight]);
-      
+
       // Embed the screenshot to fill the page (or fit centered if dimensions differ slightly)
       pdfPage.drawImage(image, {
         x: 0,
@@ -641,7 +666,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[PDF Export] Error generating PDF:", error);
-    
+
     // Make sure browser is closed even on error
     if (browser) {
       try {
@@ -650,11 +675,11 @@ export async function POST(req: NextRequest) {
         console.error("[PDF Export] Error closing browser:", closeError);
       }
     }
-    
+
     return NextResponse.json(
-      { 
-        error: "Failed to generate PDF", 
-        details: error instanceof Error ? error.message : "Unknown error" 
+      {
+        error: "Failed to generate PDF",
+        details: error instanceof Error ? error.message : "Unknown error"
       },
       { status: 500 }
     );
