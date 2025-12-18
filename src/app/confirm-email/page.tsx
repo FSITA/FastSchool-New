@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2 } from 'lucide-react';
 
@@ -33,11 +34,12 @@ export default function ConfirmEmailPage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button asChild className="w-full text-base py-6 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-500">
-                        <Link href="/auth/login">
-                            Accedi ora
-                        </Link>
-                    </Button>
+                    <Link
+                        href="/auth/login"
+                        className={cn(buttonVariants({ size: "lg", className: "w-full text-base py-6 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-500" }))}
+                    >
+                        Accedi ora
+                    </Link>
                 </CardFooter>
             </Card>
         </div>

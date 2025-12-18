@@ -6,13 +6,14 @@ export async function GET() {
     console.log('🔍 Testing database connection...')
     console.log('DATABASE_URL prefix:', process.env.DATABASE_URL?.slice(0, 60) + '***')
     console.log('NODE_ENV:', process.env.NODE_ENV)
-    
+
     // Test basic connection
     await prisma.$connect()
-    
+
     // Test query
-    const result = await prisma.$queryRaw`SELECT NOW() as current_time, current_database(), current_user(), inet_server_addr()`
-    
+    // Test query (simplified to avoid syntax errors)
+    const result = await prisma.$queryRaw`SELECT 1 as connected, NOW()::text as current_time`
+
     return NextResponse.json({
       success: true,
       message: 'Database connection successful!',
@@ -26,7 +27,7 @@ export async function GET() {
     })
   } catch (error: any) {
     console.error('❌ Database connection failed:', error)
-    
+
     return NextResponse.json({
       success: false,
       message: 'Database connection failed',
