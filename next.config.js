@@ -20,7 +20,7 @@ const config = {
   },
   // Add this for Render.com compatibility
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'pdf-parse'],
+    serverComponentsExternalPackages: ['@prisma/client', 'pdf-parse', 'puppeteer-core', '@sparticuz/chromium', 'puppeteer'],
   },
   // Ensure proper server configuration for Render.com
   serverRuntimeConfig: {

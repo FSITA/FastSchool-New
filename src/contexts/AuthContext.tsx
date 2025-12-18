@@ -33,6 +33,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    // SPECIAL CASE: Email Confirmation Page
+    // If the user is on the confirmation page, we explicitly DO NOT want to initialize the session.
+    // This forces the user to log in manually, which ensures the trial initialization logic runs correctly.
+    if (window.location.pathname === '/confirm-email') {
+      console.log('AuthContext: On confirmation page, skipping session initialization to force manual login')
+      setLoading(false)
+      setInitializing(false)
+      return
+    }
+
     // Get initial session and handle URL session
     const getInitialSession = async () => {
       try {
@@ -78,6 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // Skip auth state updates on confirmation page
+        if (window.location.pathname === '/confirm-email') {
+          console.log('AuthContext: Skipping auth state change on confirmation page')
+          return
+        }
+
         console.log('AuthContext: Auth state changed:', event, session?.user?.email)
         setSession(session)
         setUser(session?.user ?? null)
@@ -171,6 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/confirm-email`,
+      },
     })
 
     // Initialize trial for new users (same as Google OAuth flow)
@@ -185,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     //       },
     //       body: JSON.stringify({ userId: data.user.id }),
     //     })
-    //     
+    //
     //     if (!trialResponse.ok) {
     //       console.error('[AuthContext] Failed to initialize trial:', await trialResponse.text())
     //     } else {
