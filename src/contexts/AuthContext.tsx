@@ -37,16 +37,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getInitialSession = async () => {
       try {
         console.log('AuthContext: Initializing session...')
-        
+
         // Check if getSessionFromUrl is available
         if (typeof supabase.auth.getSessionFromUrl === 'function') {
           console.log('AuthContext: Using getSessionFromUrl method...')
-          
+
           // First, try to get session from URL (for OAuth callbacks)
           const { data: urlSessionData, error: urlError } = await supabase.auth.getSessionFromUrl({
             storeSession: true
           })
-          
+
           if (urlSessionData.session && !urlError) {
             console.log('AuthContext: Session found from URL:', urlSessionData.session.user?.email)
             setSession(urlSessionData.session)
@@ -99,6 +99,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }),
             })
             console.log('AuthContext: Server session cookie set successfully')
+
+            // Initialize trial for new users on sign in
+            // This ensures it runs after session is set, fixing issues with email signup
+            if (event === 'SIGNED_IN') {
+              try {
+                console.log('[AuthContext] specific SIGNED_IN event - initializing trial for:', session.user.id)
+                const trialResponse = await fetch('/api/subscription/initialize-trial', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ userId: session.user.id }),
+                })
+
+                if (!trialResponse.ok) {
+                  // It's possible the user already has a trial, or API failed.
+                  // Since the API is idempotent (checks existing), clean errors are fine.
+                  console.warn('[AuthContext] Trial init response:', await trialResponse.text())
+                } else {
+                  console.log('[AuthContext] Trial verified/initialized successfully')
+                }
+              } catch (trialError) {
+                console.error('[AuthContext] Error initializing trial in onAuthStateChange:', trialError)
+              }
+            }
           } catch (error) {
             console.error('AuthContext: Error setting server session cookie:', error)
           }
@@ -117,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     })
-    
+
     // Set server-readable session cookie for email/password login
     if (!error && data.session) {
       try {
@@ -135,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error setting server session cookie:', cookieError)
       }
     }
-    
+
     return { error: error as Error | null }
   }
 
@@ -147,30 +172,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     })
-    
+
     // Initialize trial for new users (same as Google OAuth flow)
-    if (!error && data.user) {
-      try {
-        console.log('[AuthContext] Initializing trial for new user:', data.user.id)
-        const trialResponse = await fetch('/api/subscription/initialize-trial', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: data.user.id }),
-        })
-        
-        if (!trialResponse.ok) {
-          console.error('[AuthContext] Failed to initialize trial:', await trialResponse.text())
-        } else {
-          console.log('[AuthContext] Trial initialized successfully')
-        }
-      } catch (trialError) {
-        console.error('[AuthContext] Error initializing trial:', trialError)
-        // Don't fail signup if trial init fails - it can be retried later
-      }
-    }
-    
+    // Removed: handled by onAuthStateChange to ensure session is available
+    // if (!error && data.user) {
+    //   try {
+    //     console.log('[AuthContext] Initializing trial for new user:', data.user.id)
+    //     const trialResponse = await fetch('/api/subscription/initialize-trial', {
+    //       method: 'POST',
+    //       headers: {
+    //         'Content-Type': 'application/json',
+    //       },
+    //       body: JSON.stringify({ userId: data.user.id }),
+    //     })
+    //     
+    //     if (!trialResponse.ok) {
+    //       console.error('[AuthContext] Failed to initialize trial:', await trialResponse.text())
+    //     } else {
+    //       console.log('[AuthContext] Trial initialized successfully')
+    //     }
+    //   } catch (trialError) {
+    //     console.error('[AuthContext] Error initializing trial:', trialError)
+    //     // Don't fail signup if trial init fails - it can be retried later
+    //   }
+    // }
+
     return { error: error as Error | null }
   }
 
@@ -179,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error('Authentication not configured') }
     }
     const { error } = await supabase.auth.signOut()
-    
+
     // Clear server session cookies
     try {
       await fetch('/api/auth/set-session', {
@@ -195,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (cookieError) {
       console.error('Error clearing server session cookie:', cookieError)
     }
-    
+
     return { error: error as Error | null }
   }
 
@@ -203,15 +229,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) {
       return { error: new Error('Authentication not configured') }
     }
-    
+
     // Get the current path to redirect back to after auth
     const currentPath = window.location.pathname
-    const redirectTo = currentPath === '/auth/login' || currentPath === '/auth/register' 
-      ? `${window.location.origin}/auth/callback` 
+    const redirectTo = currentPath === '/auth/login' || currentPath === '/auth/register'
+      ? `${window.location.origin}/auth/callback`
       : `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentPath)}`
-    
+
     console.log('AuthContext: Initiating Google OAuth with redirectTo:', redirectTo)
-    
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
